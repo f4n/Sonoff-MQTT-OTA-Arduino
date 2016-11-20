@@ -364,44 +364,50 @@ void handleRoot()
 #endif  // USE_POWERMONITOR
 
 #ifdef SEND_TELEMETRY_DS18B20
-    // Needs TelePeriod to refresh data (Do not do it here as it takes too much time)
-    char stemp[10];
-    float st;
-    if (dsb_readTemp(st)) {        // Check if read failed
-      page += F("<table style='width:100%'>");
-      dtostrf(st, 1, DSB_RESOLUTION &3, stemp);
-      page += F("<tr><td>DSB Temperature: </td><td>"); page += stemp; page += F("&deg;C</td></tr>");
-      page += F("</table><br/>");
+    if ( detected_sensor == SEND_TELEMETRY_DS18B20 ) {
+      // Needs TelePeriod to refresh data (Do not do it here as it takes too much time)
+      char stemp[10];
+      float st;
+      if (dsb_readTemp(st)) {        // Check if read failed
+        page += F("<table style='width:100%'>");
+        dtostrf(st, 1, DSB_RESOLUTION &3, stemp);
+        page += F("<tr><td>DSB Temperature: </td><td>"); page += stemp; page += F("&deg;C</td></tr>");
+        page += F("</table><br/>");
+      }
     }
 #endif  // SEND_TELEMETRY_DS18B20
 
 #ifdef SEND_TELEMETRY_DS18x20
-    char xtemp[10];
-    float xt;
-    uint8_t xfl = 0, i;
-    for (i = 0; i < ds18x20_sensors(); i++) {
-      if (ds18x20_read(i, xt)) {   // Check if read failed
-        if (!xfl) {
-          page += F("<table style='width:100%'>");
-          xfl = 1;
+    if ( detected_sensor == SEND_TELEMETRY_DS18x20 ) {
+      char xtemp[10];
+      float xt;
+      uint8_t xfl = 0, i;
+      for (i = 0; i < ds18x20_sensors(); i++) {
+        if (ds18x20_read(i, xt)) {   // Check if read failed
+          if (!xfl) {
+            page += F("<table style='width:100%'>");
+            xfl = 1;
+          }
+          dtostrf(xt, 1, DSB_RESOLUTION &3, xtemp);
+          page += F("<tr><td>DS"); page += String(i +1); page += F(" Temperature: </td><td>"); page += xtemp; page += F("&deg;C</td></tr>");
         }
-        dtostrf(xt, 1, DSB_RESOLUTION &3, xtemp);
-        page += F("<tr><td>DS"); page += String(i +1); page += F(" Temperature: </td><td>"); page += xtemp; page += F("&deg;C</td></tr>");
       }
+      if (xfl) page += F("</table><br/>");
     }
-    if (xfl) page += F("</table><br/>");
 #endif  // SEND_TELEMETRY_DS18x20
 
 #ifdef SEND_TELEMETRY_DHT
-    char dtemp[10];
-    float dt, dh;
-    if (dht_readTempHum(false, dt, dh)) {     // Read temperature as Celsius (the default)
-      page += F("<table style='width:100%'>");
-      dtostrf(dt, 1, DHT_RESOLUTION &3, dtemp);
-      page += F("<tr><td>DHT Temperature: </td><td>"); page += dtemp; page += F("&deg;C</td></tr>");
-      dtostrf(dh, 1, 1, dtemp);
-      page += F("<tr><td>DHT Humidity: </td><td>"); page += dtemp; page += F("%</td></tr>");
-      page += F("</table><br/>");
+    if ( detected_sensor == SEND_TELEMETRY_DHT ) {
+      char dtemp[10];
+      float dt, dh;
+      if (dht_readTempHum(false, dt, dh)) {     // Read temperature as Celsius (the default)
+        page += F("<table style='width:100%'>");
+        dtostrf(dt, 1, DHT_RESOLUTION &3, dtemp);
+        page += F("<tr><td>DHT Temperature: </td><td>"); page += dtemp; page += F("&deg;C</td></tr>");
+        dtostrf(dh, 1, 1, dtemp);
+        page += F("<tr><td>DHT Humidity: </td><td>"); page += dtemp; page += F("%</td></tr>");
+        page += F("</table><br/>");
+      }
     }
 #endif  // SEND_TELEMETRY_DHT
 

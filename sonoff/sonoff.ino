@@ -282,6 +282,10 @@ uint8_t multipress = 0;               // Number of button presses within multiwi
   byte domoticz_update_flag;  
 #endif  // USE_DOMOTICZ 
 
+#ifdef USE_EXTERNAL_SENSOR
+  uint8_t detected_sensor = 0;
+#endif // USE_EXTERNAL_SENSOR
+
 /********************************************************************************************/
 
 void CFG_Default()
@@ -1426,6 +1430,42 @@ void hlw_margin_chk()
 }
 #endif  // USE_POWERMONITOR
 
+#ifdef USE_EXTERNAL_SENSOR
+void detect_sensor() {
+  detected_sensor = 0;
+
+  // first try to detect the DHT
+#ifdef SEND_TELEMETRY_DHT
+  addLog_P(LOG_LEVEL_DEBUG, PSTR("APP: Try to detect DHT..."));
+  dht_init();
+  dht_readPrep();
+  float dt, dh;
+  if (dht_readTempHum(false, dt, dh)) { 
+    detected_sensor = SEND_TELEMETRY_DHT;
+    addLog_P(LOG_LEVEL_DEBUG, PSTR("APP: ... detected!"));
+    return;
+  }
+  addLog_P(LOG_LEVEL_DEBUG, PSTR("APP: ... false"));
+#endif
+
+#ifdef SEND_TELEMETRY_DS18B20
+  addLog_P(LOG_LEVEL_DEBUG, PSTR("APP: Try to detect DS18B20..."));
+  dsb_readTempPrep();
+  delay(1000);
+  float t;
+  if (dsb_readTemp(t)) { 
+    detected_sensor = SEND_TELEMETRY_DS18B20;
+    addLog_P(LOG_LEVEL_DEBUG, PSTR("APP: ... detected!"));
+    return;
+  }
+  addLog_P(LOG_LEVEL_DEBUG, PSTR("APP: ... false"));
+#endif  // SEND_TELEMETRY_DS18B20
+
+  addLog_P(LOG_LEVEL_DEBUG, PSTR("APP: No external sensor detected!"));
+
+}
+#endif // USE_EXTERNAL_SENSOR
+
 void every_second_cb()
 {
   // 1 second rtc interrupt routine
@@ -1487,19 +1527,32 @@ void every_second()
   if (sysCfg.tele_period) {
     tele_period++;
     if (tele_period == sysCfg.tele_period -1) {
+
+#ifdef USE_EXTERNAL_SENSOR
+
+      if ( detected_sensor == 0 ) {
+        // do nothing
       
+#ifdef SEND_TELEMETRY_DHT    
+      } else if ( detected_sensor == 1 ) {
+        dht_readPrep();
+#endif // SEND_TELEMETRY_DHT
+
 #ifdef SEND_TELEMETRY_DS18B20
-      dsb_readTempPrep();
-#endif  // SEND_TELEMETRY_DS18B20
+      } else if ( detected_sensor == 2 ) {
+        dsb_readTempPrep();
+#endif // SEND_TELEMETRY_DS18B20
+
 
 #ifdef SEND_TELEMETRY_DS18x20
-      ds18x20_search();      // Check for changes in sensors number
-      ds18x20_convert();     // Start Conversion, takes up to one second
-#endif  // SEND_TELEMETRY_DS18x20
+      } else if ( detected_sensor == 3 ) {
+        ds18x20_search();      // Check for changes in sensors number
+        ds18x20_convert();     // Start Conversion, takes up to one second
+#endif // SEND_TELEMETRY_DS18B20
 
-#ifdef SEND_TELEMETRY_DHT
-      dht_readPrep();
-#endif  // SEND_TELEMETRY_DHT
+      }
+
+#endif  // USE_EXTERNAL_SENSOR
 
     }
     if (tele_period >= sysCfg.tele_period) {
@@ -1550,62 +1603,74 @@ void every_second()
       }
 #endif  // SEND_TELEMETRY_RSSI
 
+#ifdef USE_EXTERNAL_SENSOR
+
+      if ( detected_sensor == 0 ) {
+        // do nothing
+      
+#ifdef SEND_TELEMETRY_DHT    
+      } else if ( detected_sensor == SEND_TELEMETRY_DHT ) {
+        if (dht_readTempHum(false, t, h)) {     // Read temperature as Celsius (the default)
+          dtostrf(t, 1, DHT_RESOLUTION &3, stemp1);
+          dtostrf(h, 1, 1, stemp2);
+          if (sysCfg.message_format == JSON) {
+            snprintf_P(svalue, sizeof(svalue), PSTR("%s, \"DHT\":{\"Temperature\":\"%s\", \"Humidity\":\"%s\"}"), svalue, stemp1, stemp2);
+          } else {
+            snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/DHT/TEMPERATURE"), PUB_PREFIX2, sysCfg.mqtt_topic);
+            snprintf_P(svalue, sizeof(svalue), PSTR("%s%s"), stemp1, (sysCfg.mqtt_units) ? " C" : "");
+            mqtt_publish(stopic, svalue);
+            snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/DHT/HUMIDITY"), PUB_PREFIX2, sysCfg.mqtt_topic);
+            snprintf_P(svalue, sizeof(svalue), PSTR("%s%s"), stemp2, (sysCfg.mqtt_units) ? " %" : "");
+            mqtt_publish(stopic, svalue);
+          }
+        }        
+#endif  // SEND_TELEMETRY_DHT    
+
 #ifdef SEND_TELEMETRY_DS18B20
-      if (dsb_readTemp(t)) {                 // Check if read failed
-        dtostrf(t, 1, DSB_RESOLUTION &3, stemp1);
-        if (sysCfg.message_format == JSON) {
-          snprintf_P(svalue, sizeof(svalue), PSTR("%s, \"DS18B20\":{\"Temperature\":\"%s\"}"), svalue, stemp1);
-        } else {
-          snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/DS18B20/TEMPERATURE"), PUB_PREFIX2, sysCfg.mqtt_topic);
-          snprintf_P(svalue, sizeof(svalue), PSTR("%s%s"), stemp1, (sysCfg.mqtt_units) ? " C" : "");
-          mqtt_publish(stopic, svalue);
+      } else if ( detected_sensor == SEND_TELEMETRY_DS18B20 ) {
+        if (dsb_readTemp(t)) {                 // Check if read failed
+          dtostrf(t, 1, DSB_RESOLUTION &3, stemp1);
+          if (sysCfg.message_format == JSON) {
+            snprintf_P(svalue, sizeof(svalue), PSTR("%s, \"DS18B20\":{\"Temperature\":\"%s\"}"), svalue, stemp1);
+          } else {
+            snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/DS18B20/TEMPERATURE"), PUB_PREFIX2, sysCfg.mqtt_topic);
+            snprintf_P(svalue, sizeof(svalue), PSTR("%s%s"), stemp1, (sysCfg.mqtt_units) ? " C" : "");
+            mqtt_publish(stopic, svalue);
+          }
         }
-      }
 #endif  // SEND_TELEMETRY_DS18B20
 
 #ifdef SEND_TELEMETRY_DS18x20
-      byte dsxflg = 0;
-      for (i = 0; i < ds18x20_sensors(); i++) {
-        if (ds18x20_read(i,t)) {           // Check if read failed
-          if (!dsxflg) {
-            snprintf_P(svalue, sizeof(svalue), PSTR("%s, \"DS18x20\":{"), svalue);
-            strcpy(stemp1, "");
-            dsxflg = 1;
-          }
-          dtostrf(t, 1, DSB_RESOLUTION &3, stemp2);
-          if (sysCfg.message_format == JSON) {
-            snprintf_P(svalue, sizeof(svalue), PSTR("%s%s\"DS%d\":{\"Type\":\"%s\", \"Address\":\"%s\", \"Temperature\":\"%s\"}"),
-              svalue, stemp1, i +1, ds18x20_type(i).c_str(), ds18x20_address(i).c_str(), stemp2);
-            strcpy(stemp1, ", ");
-          } else {
-            snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%s/%d/ADDRESS"), PUB_PREFIX2, sysCfg.mqtt_topic, ds18x20_type(i).c_str(), i +1);
-            snprintf_P(svalue, sizeof(svalue), PSTR("%s"), ds18x20_address(i).c_str());
-            mqtt_publish(stopic, svalue);
-            snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%s/%d/TEMPERATURE"), PUB_PREFIX2, sysCfg.mqtt_topic, ds18x20_type(i).c_str(), i +1);
-            snprintf_P(svalue, sizeof(svalue), PSTR("%s%s"), stemp2, (sysCfg.mqtt_units) ? " C" : "");
-            mqtt_publish(stopic, svalue);
+      } else if ( detected_sensor == SEND_TELEMETRY_DS18x20 ) {
+        byte dsxflg = 0;
+        for (i = 0; i < ds18x20_sensors(); i++) {
+          if (ds18x20_read(i,t)) {           // Check if read failed
+            if (!dsxflg) {
+              snprintf_P(svalue, sizeof(svalue), PSTR("%s, \"DS18x20\":{"), svalue);
+              strcpy(stemp1, "");
+              dsxflg = 1;
+            }
+            dtostrf(t, 1, DSB_RESOLUTION &3, stemp2);
+            if (sysCfg.message_format == JSON) {
+              snprintf_P(svalue, sizeof(svalue), PSTR("%s%s\"DS%d\":{\"Type\":\"%s\", \"Address\":\"%s\", \"Temperature\":\"%s\"}"),
+                svalue, stemp1, i +1, ds18x20_type(i).c_str(), ds18x20_address(i).c_str(), stemp2);
+              strcpy(stemp1, ", ");
+            } else {
+              snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%s/%d/ADDRESS"), PUB_PREFIX2, sysCfg.mqtt_topic, ds18x20_type(i).c_str(), i +1);
+              snprintf_P(svalue, sizeof(svalue), PSTR("%s"), ds18x20_address(i).c_str());
+              mqtt_publish(stopic, svalue);
+              snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%s/%d/TEMPERATURE"), PUB_PREFIX2, sysCfg.mqtt_topic, ds18x20_type(i).c_str(), i +1);
+              snprintf_P(svalue, sizeof(svalue), PSTR("%s%s"), stemp2, (sysCfg.mqtt_units) ? " C" : "");
+              mqtt_publish(stopic, svalue);
+            }
           }
         }
-      }
-      if (dsxflg) snprintf_P(svalue, sizeof(svalue), PSTR("%s}"), svalue);
+        if (dsxflg) snprintf_P(svalue, sizeof(svalue), PSTR("%s}"), svalue);
 #endif  // SEND_TELEMETRY_DS18x20
 
-#ifdef SEND_TELEMETRY_DHT
-      if (dht_readTempHum(false, t, h)) {     // Read temperature as Celsius (the default)
-        dtostrf(t, 1, DHT_RESOLUTION &3, stemp1);
-        dtostrf(h, 1, 1, stemp2);
-        if (sysCfg.message_format == JSON) {
-          snprintf_P(svalue, sizeof(svalue), PSTR("%s, \"DHT\":{\"Temperature\":\"%s\", \"Humidity\":\"%s\"}"), svalue, stemp1, stemp2);
-        } else {
-          snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/DHT/TEMPERATURE"), PUB_PREFIX2, sysCfg.mqtt_topic);
-          snprintf_P(svalue, sizeof(svalue), PSTR("%s%s"), stemp1, (sysCfg.mqtt_units) ? " C" : "");
-          mqtt_publish(stopic, svalue);
-          snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/DHT/HUMIDITY"), PUB_PREFIX2, sysCfg.mqtt_topic);
-          snprintf_P(svalue, sizeof(svalue), PSTR("%s%s"), stemp2, (sysCfg.mqtt_units) ? " %" : "");
-          mqtt_publish(stopic, svalue);
-        }
       }
-#endif  // SEND_TELEMETRY_DHT
+
+#endif  // USE_EXTERNAL_SENSOR
 
 #ifdef USE_POWERMONITOR
 #ifdef SEND_TELEMETRY_ENERGY
@@ -1961,9 +2026,9 @@ void setup()
 
   rtc_init(every_second_cb);
 
-#ifdef SEND_TELEMETRY_DHT
-  dht_init();
-#endif
+#ifdef USE_EXTERNAL_SENSOR
+  detect_sensor();
+#endif // USE_EXTERNAL_SENSOR
 
 #ifdef USE_POWERMONITOR
   hlw_init();

@@ -82,9 +82,9 @@ const char HTTP_HEAD[] PROGMEM =
   "button{border:0;border-radius:0.3rem;background-color:#1fa3ec;color:#fff;line-height:2.4rem;font-size:1.2rem;width:100%;-webkit-transition-duration:0.4s;transition-duration:0.4s;}"
   "button:hover{background-color:#006cba;}"
   ".q{float:right;width:64px;text-align:right;}"
-  ".l{background:url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAMAAABEpIrGAAAALVBMVEX///8EBwfBwsLw8PAzNjaCg4NTVVUjJiZDRUUUFxdiZGSho6O"
-  "Sk5Pg4eFydHTCjaf3AAAAZElEQVQ4je2NSw7AIAhEBamKn97/uMXEGBvozkWb9C2Zx4xzWykBhFAeYp9gkLyZE0zIMno9n4g19hmdY39scwqVkOXaxph0ZCXQcqxSpgQpONa59wkRDOL93eA"
-  "XvimwlbPbwwVAegLS1HGfZAAAAABJRU5ErkJggg==') no-repeat left center;background-size:1em;}"
+  ".l{background:url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAMAAABEpIrGAAAAQlBMVEUAAAC/wcHR0dFCRUVTVVVTVVVhY2OCgoKBg4ORk5OfoqLAwMC+vr4zNjZCRERhZGSCg4Nyc3MEBwczNjYjJi"
+  "YUFxdkB9QAAAAAEnRSTlMANQ7q3tLQz8KTXkEV+/bhvbF89BJgAAAAd0lEQVQ4y+2OSw6AIAxEBRUE/PK5/1WdGCAmFN2wMXFWr53ppF1b6dFCo675vY3qad/ZLEf5A4xwMKY8YCh9g/XCL1yBpggIbHlkdAjqgy2xor5AwZSYYaACe+IZw"
+  "2MDrwTkW4PMQxHwlpC/n5P6A98MBMoPXRudn5ofYO1wNYwAAAAASUVORK5CYII=') no-repeat left center;background-size:1em;}"
   "</style>"
   "</head>"
   "<body>"
@@ -112,9 +112,9 @@ const char HTTP_BTN_MAIN[] PROGMEM =
 const char HTTP_BTN_CONF[] PROGMEM =
   "<br/><br/><form action='/cn' method='post'><button>Configuration menu</button></form>";
 const char HTTP_LNK_ITEM[] PROGMEM =
-  "<div><a href='#p' onclick='c(this)'>{v}</a>&nbsp;<span class='q {i}'>{r}%</span></div>";
+  "<div><a href='#p' onclick='c(this)'><button>{v}&nbsp;<span class='q {i}'>{r}%</span></button></a></div>";
 const char HTTP_LNK_SCAN[] PROGMEM =
-  "<div><a href='/w1'>Scan for wifi networks</a></div><br/>";
+  "<div><a href='/w1'><button>Scan for wifi networks</button></a></div><br/>";
 const char HTTP_FORM_WIFI[] PROGMEM =
   "<fieldset><legend><b>&nbsp;Wifi parameters&nbsp;</b></legend><form method='post' action='sv'>"
   "<input id='w' name='w' value='1' hidden><input id='r' name='r' value='1' hidden>"

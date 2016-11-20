@@ -1,2 +1,7 @@
 .pioenvs
 .piolibdeps
+sonoff/user_config.custom.h
+sonoff/user_config.save.h
+.gitattributes
+git_pull.sh
+git_push.sh

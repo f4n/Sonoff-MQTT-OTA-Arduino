@@ -27,9 +27,9 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #ifdef USE_WEBSERVER
 /*********************************************************************************************\
- * Web server and WiFi Manager
- *
- * Enables configuration and reconfiguration of WiFi credentials using a Captive Portal
+ * Web server and WiFi Manager 
+ * 
+ * Enables configuration and reconfiguration of WiFi credentials using a Captive Portal 
  * Source by AlexT (https://github.com/tzapu)
 \*********************************************************************************************/
 
@@ -311,11 +311,8 @@ void handleRoot()
   if (_httpflag == HTTP_MANAGER) {
     handleWifi0();
   } else {
-
+    
     String page = FPSTR(HTTP_HEAD);
-//    page.replace("<meta", "<meta http-equiv=\"refresh\" content=\"4; URL=/\"><meta");                    // Fails Edge (asks for reload)
-//    page.replace("</script>", "setTimeout(function(){window.location.reload(1);},4000);</script>");     // Repeats POST on All
-    page.replace("</script>", "setTimeout(function(){window.location.replace(\"/\");},4000);</script>");  // OK on All
     page.replace("{v}", "Main menu");
 
     if (Maxdevice) {
@@ -339,82 +336,15 @@ void handleRoot()
           page += String(idx);
         }
         page += F("</button></form></td>");
-      }
+      }  
       page += F("</tr></table><br/>");
     }
-
-
-#ifdef USE_POWERMONITOR
-    float ped, pi, pc;
-    uint16_t pe, pw, pu;
-    char ptemp[10];
-    hlw_readEnergy(0, ped, pe, pw, pu, pi, pc);
-    page += F("<table style='width:100%'>");
-    page += F("<tr><td>Voltage: </td><td>"); page += String(pu); page += F(" V</td></tr>");
-    dtostrf(pi, 1, 3, ptemp);
-    page += F("<tr><td>Current: </td><td>"); page += ptemp; page += F(" A</td></tr>");
-    page += F("<tr><td>Power: </td><td>"); page += String(pw); page += F(" W</td></tr>");
-    dtostrf(pc, 1, 2, ptemp);
-    page += F("<tr><td>Power Factor: </td><td>"); page += ptemp; page += F("</td></tr>");
-    dtostrf(ped, 1, 3, ptemp);
-    page += F("<tr><td>Energy Today: </td><td>"); page += ptemp; page += F(" kWh</td></tr>");
-    dtostrf((float)sysCfg.hlw_kWhyesterday / 100000000, 1, 3, ptemp);
-    page += F("<tr><td>Energy Yesterday: </td><td>"); page += ptemp; page += F(" kWh</td></tr>");
-    page += F("</table><br/>");
-#endif  // USE_POWERMONITOR
-
-#ifdef SEND_TELEMETRY_DS18B20
-    // Needs TelePeriod to refresh data (Do not do it here as it takes too much time)
-    char stemp[10];
-    float st;
-    if (dsb_readTemp(st)) {        // Check if read failed
-      page += F("<table style='width:100%'>");
-      dtostrf(st, 1, DSB_RESOLUTION &3, stemp);
-      page += F("<tr><td>DSB Temperature: </td><td>"); page += stemp; page += F("&deg;C</td></tr>");
-      page += F("</table><br/>");
-    }
-#endif  // SEND_TELEMETRY_DS18B20
-
-#ifdef SEND_TELEMETRY_DS18x20
-    char xtemp[10];
-    float xt;
-    uint8_t xfl = 0, i;
-    for (i = 0; i < ds18x20_sensors(); i++) {
-      if (ds18x20_read(i, xt)) {   // Check if read failed
-        if (!xfl) {
-          page += F("<table style='width:100%'>");
-          xfl = 1;
-        }
-        dtostrf(xt, 1, DSB_RESOLUTION &3, xtemp);
-        page += F("<tr><td>DS"); page += String(i +1); page += F(" Temperature: </td><td>"); page += xtemp; page += F("&deg;C</td></tr>");
-      }
-    }
-    if (xfl) page += F("</table><br/>");
-#endif  // SEND_TELEMETRY_DS18x20
-
-#ifdef SEND_TELEMETRY_DHT
-    char dtemp[10];
-    float dt, dh;
-    if (dht_readTempHum(false, dt, dh)) {     // Read temperature as Celsius (the default)
-      page += F("<table style='width:100%'>");
-      dtostrf(dt, 1, DHT_RESOLUTION &3, dtemp);
-      page += F("<tr><td>DHT Temperature: </td><td>"); page += dtemp; page += F("&deg;C</td></tr>");
-      dtostrf(dh, 1, 1, dtemp);
-      page += F("<tr><td>DHT Humidity: </td><td>"); page += dtemp; page += F("%</td></tr>");
-      page += F("</table><br/>");
-    }
-#endif  // SEND_TELEMETRY_DHT
-
+    
     if (_httpflag == HTTP_ADMIN) {
       page += FPSTR(HTTP_BTN_MENU1);
       page += FPSTR(HTTP_BTN_RSTRT);
     }
     showPage(page);
-
-#ifdef SEND_TELEMETRY_DS18x20
-    ds18x20_search();      // Check for changes in sensors number
-    ds18x20_convert();     // Start Conversion, takes up to one second
-#endif  // SEND_TELEMETRY_DS18x20
   }
 }
 
@@ -519,7 +449,7 @@ void handleWifi(boolean scan)
   }
 
   page += FPSTR(HTTP_FORM_WIFI);
-
+  
   char str[33];
   if (!strcmp(WIFI_HOSTNAME, DEF_WIFI_HOSTNAME)) {
     snprintf_P(str, sizeof(str), PSTR(DEF_WIFI_HOSTNAME), sysCfg.mqtt_topic, ESP.getChipId() & 0x1FFF);
@@ -564,23 +494,23 @@ void handleMqtt()
   showPage(page);
 }
 
-#ifdef USE_DOMOTICZ
-void handleDomoticz()
-{
-  addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Handle Domoticz config"));
+#ifdef USE_DOMOTICZ  
+void handleDomoticz()  
+{  
+  addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Handle Domoticz config"));  
 
-  String page = FPSTR(HTTP_HEAD);
-  page.replace("{v}", "Configure Domoticz");
-  page += FPSTR(HTTP_FORM_DOMOTICZ);
-  page.replace("{d1}", String(sysCfg.domoticz_in_topic));
-  page.replace("{d2}", String(sysCfg.domoticz_out_topic));
-  page.replace("{d3}", String((int)sysCfg.domoticz_relay_idx[0]));
-  page.replace("{d4}", String((int)sysCfg.domoticz_update_timer));
-  page += FPSTR(HTTP_FORM_END);
-  page += FPSTR(HTTP_BTN_CONF);
-  showPage(page);
-}
-#endif  // USE_DOMOTICZ
+  String page = FPSTR(HTTP_HEAD);  
+  page.replace("{v}", "Configure Domoticz");  
+  page += FPSTR(HTTP_FORM_DOMOTICZ);  
+  page.replace("{d1}", String(sysCfg.domoticz_in_topic));  
+  page.replace("{d2}", String(sysCfg.domoticz_out_topic));  
+  page.replace("{d3}", String((int)sysCfg.domoticz_relay_idx[0]));  
+  page.replace("{d4}", String((int)sysCfg.domoticz_update_timer));  
+  page += FPSTR(HTTP_FORM_END);  
+  page += FPSTR(HTTP_BTN_CONF);  
+  showPage(page);  
+}  
+#endif  // USE_DOMOTICZ  
 
 void handleLog()
 {
@@ -593,7 +523,7 @@ void handleLog()
     page.replace("{a" + String(i), (i == sysCfg.seriallog_level) ? " selected " : " ");
     page.replace("{b" + String(i), (i == sysCfg.weblog_level) ? " selected " : " ");
     page.replace("{c" + String(i), (i == sysCfg.syslog_level) ? " selected " : " ");
-  }
+  }  
   page.replace("{l2}", String(sysCfg.syslog_host));
   page.replace("{l3}", String(sysCfg.syslog_port));
   page.replace("{l4}", String(sysCfg.tele_period));
@@ -720,7 +650,7 @@ void handleUpgradeStart()
     snprintf_P(svalue, sizeof(svalue), PSTR("otaurl %s"), webServer->arg("o").c_str());
     do_cmnd(svalue);
   }
-
+  
   String page = FPSTR(HTTP_HEAD);
   page.replace("{v}", "Info");
   page += F("<div style='text-align:center;'><b>Upgrade started ...</b></div>");
@@ -787,9 +717,9 @@ void handleUploadLoop()
     Update.end();
     return;
   }
-
+  
   HTTPUpload& upload = webServer->upload();
-
+  
   if (upload.status == UPLOAD_FILE_START) {
     restartflag = 60;
     mqttcounter = 60;
@@ -980,7 +910,7 @@ void handleNotFound()
   for ( uint8_t i = 0; i < webServer->args(); i++ ) {
     message += " " + webServer->argName ( i ) + ": " + webServer->arg ( i ) + "\n";
   }
-
+  
   webServer->sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   webServer->sendHeader("Pragma", "no-cache");
   webServer->sendHeader("Expires", "-1");
@@ -1014,3 +944,4 @@ boolean isIp(String str)
 }
 
 #endif  // USE_WEBSERVER
+

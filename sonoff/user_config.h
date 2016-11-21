@@ -63,7 +63,7 @@
 #define DOMOTICZ_UPDATE_TIMER  0            // Send relay status (0 = disable, 1 - 3600 seconds) (Optional)
 
 // MQTT - Telemetry
-#define TELE_PERIOD            300          // Telemetry (0 = disable, 2 - 3600 seconds)
+#define TELE_PERIOD            300          // Telemetry (0 = disable, 10 - 3600 seconds)
 #define SEND_TELEMETRY_UPTIME               // Enable sending uptime telemetry (if disabled will still send hourly message)
 #define SEND_TELEMETRY_RSSI                 // Enable sending wifi RSSI telemetry
 #define SEND_TELEMETRY_POWER                // Enable sending power telemetry
@@ -71,6 +71,9 @@
 // HTTP
 #define USE_WEBSERVER                       // Enable web server and wifi manager (+37k code, +2k mem) - Disable by //
 #define WEB_SERVER             2            // Web server (0 = Off, 1 = Start as User, 2 = Start as Admin)
+// #define WEB_SERVER_AUTHENTICATION           // Uncomment to enabled webserver username/password authentication
+#define WEB_SERVER_USER        "sonoff"     // Webserver login user
+#define WEB_SERVER_PASSWORD    "sonoff"     // Webserver login password
 
 // Time - Up to three NTP servers in your region
 #define NTP_SERVER1            "pool.ntp.org"

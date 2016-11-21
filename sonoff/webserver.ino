@@ -252,6 +252,16 @@ void stopWebserver()
   }
 }
 
+bool checkAuthentication() {
+#ifdef WEB_SERVER_AUTHENTICATION  
+  if(!webServer->authenticate(WEB_SERVER_USER, WEB_SERVER_PASSWORD)) {
+    webServer->requestAuthentication();
+    return false;
+  }
+#endif
+  return true;
+}
+
 void beginWifiManager()
 {
   // setup AP
@@ -300,6 +310,8 @@ void showPage(String &page)
 
 void handleRoot()
 {
+  if ( !checkAuthentication() ) return;
+  
   char svalue[MESSZ];
 
   addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Handle root"));
@@ -426,6 +438,8 @@ void handleRoot()
 
 void handleConfig()
 {
+  if ( !checkAuthentication() ) return;
+  
   addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Handle config"));
 
   String page = FPSTR(HTTP_HEAD);
@@ -446,7 +460,9 @@ void handleWifi0()
 }
 
 void handleWifi(boolean scan)
-{
+{ 
+  if ( !checkAuthentication() ) return;
+  
   char log[LOGSZ];
 
   addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Handle Wifi config"));
@@ -541,6 +557,8 @@ void handleWifi(boolean scan)
 
 void handleMqtt()
 {
+  if ( !checkAuthentication() ) return;
+  
   addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Handle MQTT config"));
 
   String page = FPSTR(HTTP_HEAD);
@@ -584,6 +602,8 @@ void handleDomoticz()
 
 void handleLog()
 {
+  if ( !checkAuthentication() ) return;
+  
   addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Handle Log config"));
 
   String page = FPSTR(HTTP_HEAD);
@@ -604,6 +624,8 @@ void handleLog()
 
 void handleSave()
 {
+  if ( !checkAuthentication() ) return;
+  
   char log[LOGSZ];
   byte what = 0, restart;
   String result = "";
@@ -680,6 +702,8 @@ void handleSave()
 
 void handleReset()
 {
+  if ( !checkAuthentication() ) return;
+  
   char svalue[MESSZ];
 
   addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Reset parameters"));
@@ -697,6 +721,8 @@ void handleReset()
 
 void handleUpgrade()
 {
+  if ( !checkAuthentication() ) return;
+  
   addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Handle upgrade"));
 
   String page = FPSTR(HTTP_HEAD);
@@ -711,6 +737,8 @@ void handleUpgrade()
 
 void handleUpgradeStart()
 {
+  if ( !checkAuthentication() ) return;
+  
   char svalue[MESSZ];
 
   addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Firmware upgrade start"));
@@ -734,6 +762,8 @@ void handleUpgradeStart()
 
 void handleUploadDone()
 {
+  if ( !checkAuthentication() ) return;
+  
   char svalue[MESSZ];
 
   addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Firmware upload done"));
@@ -779,6 +809,8 @@ void handleUploadDone()
 
 void handleUploadLoop()
 {
+  if ( !checkAuthentication() ) return;
+  
   // Based on ESP8266HTTPUpdateServer.cpp uses ESP8266WebServer Parsing.cpp and Cores Updater.cpp (Update)
   char log[LOGSZ];
   boolean _serialoutput = (LOG_LEVEL_DEBUG <= sysCfg.seriallog_level);
@@ -858,6 +890,8 @@ void handleUploadLoop()
 
 void handleConsole()
 {
+  if ( !checkAuthentication() ) return;
+  
   char svalue[MESSZ];
 
   addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Handle console"));
@@ -877,6 +911,8 @@ void handleConsole()
 
 void handleAjax()
 {
+  if ( !checkAuthentication() ) return;
+  
   String message = "";
 
   byte counter = logidx;  // Points to oldest entry
@@ -895,7 +931,9 @@ void handleAjax()
 }
 
 void handleInfo()
-{
+{ 
+  if ( !checkAuthentication() ) return;
+       
   addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Handle info"));
 
   int freeMem = ESP.getFreeHeap();
@@ -949,6 +987,8 @@ void handleInfo()
 
 void handleRestart()
 {
+  if ( !checkAuthentication() ) return;
+  
   addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Restarting"));
 
   String page = FPSTR(HTTP_HEAD);

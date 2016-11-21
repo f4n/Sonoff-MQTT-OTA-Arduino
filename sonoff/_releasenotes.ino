@@ -1,4 +1,10 @@
-/* 2.0.16
+/* 2.0.16-f4n
+ * Added webserver basic authentication 
+ * Added replacer {mac} for Hostname, MqttClient and MqttTopic
+ * Added replacer {topic} for Hostname
+ * Added auto detecton for external sensors
+ *  
+ * 2.0.16
  * Add alternative sensor driver DS18x20 using OneWire library
  * Change sensor MQTT message from tele/sonoff/TEMPERATURE to tele/sonoff/DHT/TEMPERATURE or
  *   tele/sonoff/DS18B20/TEMPERATURE or tele/sonoff/DS18x20/1/TEMPERATURE

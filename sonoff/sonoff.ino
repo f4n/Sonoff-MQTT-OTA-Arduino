@@ -1955,7 +1955,7 @@ void setup()
   Serial.println();
   sysCfg.seriallog_level = LOG_LEVEL_INFO;  // Allow specific serial messages until config loaded
 
-  snprintf_P(Version, sizeof(Version), PSTR("%d.%d.%d"), VERSION >> 24 & 0xff, VERSION >> 16 & 0xff, VERSION >> 8 & 0xff);
+  snprintf_P(Version, sizeof(Version), PSTR("%d.%d.%d-f4n"), VERSION >> 24 & 0xff, VERSION >> 16 & 0xff, VERSION >> 8 & 0xff);
   if (VERSION & 0x1f) {
     idx = strlen(Version);
     Version[idx] = 96 + (VERSION & 0x1f);

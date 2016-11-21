@@ -130,7 +130,7 @@ const char HTTP_FORM_MQTT[] PROGMEM =
   "<br/><b>User</b> (" MQTT_USER ")<br/><input id='mu' name='mu' length=32 placeholder='" MQTT_USER "' value='{m4}'><br/>"
 //  "<br/><b>Password</b> (" MQTT_PASS ")<br/><input id='mp' name='mp' length=32 placeholder='" MQTT_PASS "' value='{m5}'><br/>"
   "<br/><b>Password</b><br/><input id='mp' name='mp' length=32 type='password' placeholder='" MQTT_PASS "' value='{m5}'><br/>"
-  "<br/><b>Topic</b> (" MQTT_TOPIC ")<br/><input id='mt' name='mt' length=32 placeholder='" MQTT_TOPIC" ' value='{m6}'><br/>";
+  "<br/><b>Topic</b> ({m7})<br/><input id='mt' name='mt' length=32 placeholder='" MQTT_TOPIC" ' value='{m6}'><br/>";
 #ifdef USE_DOMOTICZ
 const char HTTP_FORM_DOMOTICZ[] PROGMEM =
   "<fieldset><legend><b>&nbsp;Domoticz parameters&nbsp;</b></legend><form method='post' action='sv'>"
@@ -567,13 +567,9 @@ void handleMqtt()
   String page = FPSTR(HTTP_HEAD);
   page.replace("{v}", "Configure MQTT");
   page += FPSTR(HTTP_FORM_MQTT);
-  char str[33];
-  if (!strcmp(MQTT_CLIENT_ID, DEF_MQTT_CLIENT_ID)) {
-    snprintf_P(str, sizeof(str), PSTR(DEF_MQTT_CLIENT_ID), ESP.getChipId());
-  } else {
-    snprintf_P(str, sizeof(str), PSTR(MQTT_CLIENT_ID));
-  }
-  page.replace("{m0}", str);
+
+  page.replace("{m0}", MQTTClient);
+  page.replace("{m7}", MQTTTopic);
   page.replace("{m1}", String(sysCfg.mqtt_host));
   page.replace("{m2}", String(sysCfg.mqtt_port));
   page.replace("{m3}", String(sysCfg.mqtt_client));

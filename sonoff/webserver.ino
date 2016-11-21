@@ -545,7 +545,7 @@ void handleWifi(boolean scan)
 
   page += FPSTR(HTTP_FORM_WIFI);
 
-  page.replace("{h0}", WIFI_HOSTNAME);
+  page.replace("{h0}", Hostname);
   page.replace("{h1}", String(sysCfg.hostname));
   page.replace("{s1}", String(sysCfg.sta_ssid));
   page.replace("{p1}", String(sysCfg.sta_pwd));

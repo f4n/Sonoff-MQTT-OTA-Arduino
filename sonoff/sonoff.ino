@@ -1434,6 +1434,7 @@ void hlw_margin_chk()
 #ifdef USE_EXTERNAL_SENSOR
 void detect_sensor() {
   detected_sensor = 0;
+  addLog_P(LOG_LEVEL_INFO, PSTR("APP: External sensor auto detection"));
 
   // first try to detect the DHT
 #ifdef SEND_TELEMETRY_DHT
@@ -1443,7 +1444,7 @@ void detect_sensor() {
   float dt, dh;
   if (dht_readTempHum(false, dt, dh)) { 
     detected_sensor = SEND_TELEMETRY_DHT;
-    addLog_P(LOG_LEVEL_DEBUG, PSTR("APP: ... detected!"));
+    addLog_P(LOG_LEVEL_INFO, PSTR("APP: ... DHT detected!"));
     return;
   }
   addLog_P(LOG_LEVEL_DEBUG, PSTR("APP: ... false"));
@@ -1456,13 +1457,13 @@ void detect_sensor() {
   float t;
   if (dsb_readTemp(t)) { 
     detected_sensor = SEND_TELEMETRY_DS18B20;
-    addLog_P(LOG_LEVEL_DEBUG, PSTR("APP: ... detected!"));
+    addLog_P(LOG_LEVEL_INFO, PSTR("APP: ... DS18B20 detected!"));
     return;
   }
   addLog_P(LOG_LEVEL_DEBUG, PSTR("APP: ... false"));
 #endif  // SEND_TELEMETRY_DS18B20
 
-  addLog_P(LOG_LEVEL_DEBUG, PSTR("APP: No external sensor detected!"));
+  addLog_P(LOG_LEVEL_INFO, PSTR("APP: No external sensor detected!"));
 
 }
 #endif // USE_EXTERNAL_SENSOR

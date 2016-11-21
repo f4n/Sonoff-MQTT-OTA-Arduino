@@ -3,6 +3,7 @@
  * Added replacer {mac} for Hostname, MqttClient and MqttTopic
  * Added replacer {topic} for Hostname
  * Added auto detecton for external sensors
+ * Fixed some smaller problems e.g. read a proper DS18b20 value on the webpage
  *  
  * 2.0.16
  * Add alternative sensor driver DS18x20 using OneWire library

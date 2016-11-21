@@ -1535,18 +1535,18 @@ void every_second()
         // do nothing
       
 #ifdef SEND_TELEMETRY_DHT    
-      } else if ( detected_sensor == 1 ) {
+      } else if ( detected_sensor == SEND_TELEMETRY_DHT ) {
         dht_readPrep();
 #endif // SEND_TELEMETRY_DHT
 
 #ifdef SEND_TELEMETRY_DS18B20
-      } else if ( detected_sensor == 2 ) {
+      } else if ( detected_sensor == SEND_TELEMETRY_DS18B20 ) {
         dsb_readTempPrep();
 #endif // SEND_TELEMETRY_DS18B20
 
 
 #ifdef SEND_TELEMETRY_DS18x20
-      } else if ( detected_sensor == 3 ) {
+      } else if ( detected_sensor == SEND_TELEMETRY_DS18x20 ) {
         ds18x20_search();      // Check for changes in sensors number
         ds18x20_convert();     // Start Conversion, takes up to one second
 #endif // SEND_TELEMETRY_DS18B20

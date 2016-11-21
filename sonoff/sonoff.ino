@@ -63,8 +63,8 @@ enum msgf_t  {LEGACY, JSON, MAX_FORMAT};
 #define CHANNEL_7              7            // Future use
 #define CHANNEL_8              8            // Future use
 
-#define DEF_WIFI_HOSTNAME      "%s-%04d"    // Expands to <MQTT_TOPIC>-<last 4 decimal chars of MAC address>
-#define DEF_MQTT_CLIENT_ID     "DVES_%06X"  // Also fall back topic using Chip Id = last 6 characters of MAC address
+#define DEF_WIFI_HOSTNAME      "sonoff-{mac}"    // Expands to <MQTT_TOPIC>-<last 6 chars of MAC address>
+#define DEF_MQTT_CLIENT_ID     "SONOFF-{mac}"  // Also fall back topic using Chip Id = last 6 characters of MAC address
 
 #define HLW_PREF_PULSE         12345        // was 4975us = 201Hz = 1000W
 #define HLW_UREF_PULSE         1950         // was 1666us = 600Hz = 220V
@@ -230,6 +230,7 @@ int16_t savedatacounter;              // Counter and flag for config save to Fla
 char Version[16];                     // Version string from VERSION define
 char Hostname[33];                    // Composed Wifi hostname
 char MQTTClient[33];                  // Composed MQTT Clientname
+char MQTTTopic[32];                   // Composed MQTT Topic
 uint8_t mqttcounter = 0;              // MQTT connection retry counter
 unsigned long timerxs = 0;            // State loop timer
 int state = 0;                        // State per second flag
@@ -523,7 +524,7 @@ void mqtt_connected()
 {
   char stopic[TOPSZ], svalue[MESSZ];
 
-  snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/#"), SUB_PREFIX, sysCfg.mqtt_topic);
+  snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/#"), SUB_PREFIX, MQTTTopic);
   mqttClient.subscribe(stopic);
   mqttClient.loop();  // Solve LmacRxBlk:1 messages
   snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/#"), SUB_PREFIX, sysCfg.mqtt_grptopic);
@@ -541,24 +542,24 @@ void mqtt_connected()
 #endif  // USE_DOMOTICZ  
 
   if (mqttflag) {
-    snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/INFO"), PUB_PREFIX, sysCfg.mqtt_topic);
+    snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/INFO"), PUB_PREFIX, MQTTTopic);
     snprintf_P(svalue, sizeof(svalue), PSTR(APP_NAME " version %s, Fallback %s, GroupTopic %s"), Version, MQTTClient, sysCfg.mqtt_grptopic);
     mqtt_publish(stopic, svalue);
 #ifdef USE_WEBSERVER
     if (sysCfg.webserver) {
-      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/INFO"), PUB_PREFIX, sysCfg.mqtt_topic);
+      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/INFO"), PUB_PREFIX, MQTTTopic);
       snprintf_P(svalue, sizeof(svalue), PSTR("Webserver active for %s on %s with IP address %s"),
         (sysCfg.webserver == 2) ? "Admin" : "User", Hostname, WiFi.localIP().toString().c_str());
       mqtt_publish(stopic, svalue);
     }
 #endif  // USE_WEBSERVER
     if (MQTT_MAX_PACKET_SIZE < (TOPSZ+MESSZ)) {
-      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/WARNING"), PUB_PREFIX, sysCfg.mqtt_topic);
+      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/WARNING"), PUB_PREFIX, MQTTTopic);
       snprintf_P(svalue, sizeof(svalue), PSTR("Change MQTT_MAX_PACKET_SIZE in libraries/PubSubClient.h to at least %d"), TOPSZ+MESSZ);
       mqtt_publish(stopic, svalue);
     }
     if (!spiffsPresent()) {
-      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/WARNING"), PUB_PREFIX, sysCfg.mqtt_topic);
+      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/WARNING"), PUB_PREFIX, MQTTTopic);
       snprintf_P(svalue, sizeof(svalue), PSTR("No persistent config. Please reflash with at least 16K SPIFFS"));
       mqtt_publish(stopic, svalue);
     }
@@ -577,7 +578,7 @@ void mqtt_reconnect()
 
   mqttcounter = MQTT_RETRY_SECS;
   addLog_P(LOG_LEVEL_INFO, PSTR("MQTT: Attempting connection..."));
-  snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/lwt"), PUB_PREFIX, sysCfg.mqtt_topic);
+  snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/lwt"), PUB_PREFIX, MQTTTopic);
   if (mqttClient.connect(MQTTClient, sysCfg.mqtt_user, sysCfg.mqtt_pwd, stopic, 0, 0, "offline")) {
     addLog_P(LOG_LEVEL_INFO, PSTR("MQTT: Connected"));
     mqttcounter = 0;
@@ -624,7 +625,7 @@ void mqttDataCb(char* topic, byte* data, unsigned int data_len)
       }
     }
     if (!strlen(dataBuf)) return;
-    snprintf_P(topicBuf, sizeof(topicBuf), PSTR("%s/%s/%d/LIGHT"), SUB_PREFIX, sysCfg.mqtt_topic, i +1);
+    snprintf_P(topicBuf, sizeof(topicBuf), PSTR("%s/%s/%d/LIGHT"), SUB_PREFIX, MQTTTopic, i +1);
     domoticz_update_flag = 0;
   }
 #endif //USE_DOMOTICZ  
@@ -666,9 +667,9 @@ void mqttDataCb(char* topic, byte* data, unsigned int data_len)
 
   if (type != NULL) {
     if (devc == NULL) {
-      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%s"), PUB_PREFIX, sysCfg.mqtt_topic, type);
+      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%s"), PUB_PREFIX, MQTTTopic, type);
     } else {
-      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%d/%s"), PUB_PREFIX, sysCfg.mqtt_topic, device, type);
+      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%d/%s"), PUB_PREFIX, MQTTTopic, device, type);
     }
     strlcpy(svalue, "Error", sizeof(svalue));
 
@@ -683,10 +684,10 @@ void mqttDataCb(char* topic, byte* data, unsigned int data_len)
       if ((payload == 0) || (payload == 99)) {
         if (sysCfg.message_format == JSON) {
           snprintf_P(svalue, sizeof(svalue), PSTR("{\"Version\":\"%s\", \"Model\":%d, \"Topic\":\"%s\", \"ButtonTopic\":\"%s\", \"Subtopic\":\"%s\", \"Power\":%d, \"Timezone\":%d, \"Ledstate\":%d, \"SaveData\":%d, \"SaveState\":%d, \"Retain\":%d}"),
-            Version, sysCfg.model, sysCfg.mqtt_topic, sysCfg.mqtt_topic2, sysCfg.mqtt_subtopic, power, sysCfg.timezone, sysCfg.ledstate, sysCfg.savedata, sysCfg.savestate, sysCfg.mqtt_retain);
+            Version, sysCfg.model, MQTTTopic, sysCfg.mqtt_topic2, sysCfg.mqtt_subtopic, power, sysCfg.timezone, sysCfg.ledstate, sysCfg.savedata, sysCfg.savestate, sysCfg.mqtt_retain);
         } else {
           snprintf_P(svalue, sizeof(svalue), PSTR("%s, %d, %s, %s, %s, %d, %d, %d, %d, %d, %d"),
-            Version, sysCfg.model, sysCfg.mqtt_topic, sysCfg.mqtt_topic2, sysCfg.mqtt_subtopic, power, sysCfg.timezone, sysCfg.ledstate, sysCfg.savedata, sysCfg.savestate, sysCfg.mqtt_retain);
+            Version, sysCfg.model, MQTTTopic, sysCfg.mqtt_topic2, sysCfg.mqtt_subtopic, power, sysCfg.timezone, sysCfg.ledstate, sysCfg.savedata, sysCfg.savestate, sysCfg.mqtt_retain);
         }
         if (payload == 0) mqtt_publish(stopic, svalue);
       }
@@ -1018,21 +1019,21 @@ void mqttDataCb(char* topic, byte* data, unsigned int data_len)
       snprintf_P(svalue, sizeof(svalue), PSTR("%s"), sysCfg.mqtt_grptopic);
     }
     else if (!grpflg && !strcmp(type,"TOPIC")) {
-      if ((data_len > 0) && (data_len < sizeof(sysCfg.mqtt_topic))) {
+      if ((data_len > 0) && (data_len < sizeof(MQTTTopic))) {
         for(i = 0; i <= data_len; i++)
           if ((dataBuf[i] == '/') || (dataBuf[i] == '+') || (dataBuf[i] == '#')) dataBuf[i] = '_';
         if (!strcmp(dataBuf, MQTTClient)) payload = 1;
-        strlcpy(sysCfg.mqtt_topic, (payload == 1) ? MQTT_TOPIC : dataBuf, sizeof(sysCfg.mqtt_topic));
+        strlcpy(MQTTTopic, (payload == 1) ? MQTT_TOPIC : dataBuf, sizeof(MQTTTopic));
         restartflag = 2;
       }
-      snprintf_P(svalue, sizeof(svalue), PSTR("%s"), sysCfg.mqtt_topic);
+      snprintf_P(svalue, sizeof(svalue), PSTR("%s"), MQTTTopic);
     }
     else if (!grpflg && !strcmp(type,"BUTTONTOPIC")) {
       if ((data_len > 0) && (data_len < sizeof(sysCfg.mqtt_topic2))) {
         for(i = 0; i <= data_len; i++)
           if ((dataBuf[i] == '/') || (dataBuf[i] == '+') || (dataBuf[i] == '#')) dataBuf[i] = '_';
         if (!strcmp(dataBuf, MQTTClient)) payload = 1;
-        strlcpy(sysCfg.mqtt_topic2, (payload == 1) ? sysCfg.mqtt_topic : dataBuf, sizeof(sysCfg.mqtt_topic2));
+        strlcpy(sysCfg.mqtt_topic2, (payload == 1) ? MQTTTopic : dataBuf, sizeof(sysCfg.mqtt_topic2));
       }
       snprintf_P(svalue, sizeof(svalue), PSTR("%s"), sysCfg.mqtt_topic2);
     }
@@ -1224,7 +1225,7 @@ void mqttDataCb(char* topic, byte* data, unsigned int data_len)
   }
   if (type == NULL) {
     blinks = 1;
-    snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/SYNTAX"), PUB_PREFIX, sysCfg.mqtt_topic);
+    snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/SYNTAX"), PUB_PREFIX, MQTTTopic);
 #ifdef USE_WEBSERVER
     snprintf_P(svalue, sizeof(svalue), PSTR("Status, SaveData, SaveSate, Upgrade, Otaurl, Restart, Reset, WifiConfig, Seriallog, Weblog, Syslog, LogHost, LogPort, SSId, Password%s, Webserver"), (!grpflg) ? ", Hostname" : "");
 #else      
@@ -1296,7 +1297,7 @@ void do_cmnd(char *cmnd)
   char *token;
 
   token = strtok(cmnd, " ");
-  snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%s"), SUB_PREFIX, sysCfg.mqtt_topic, token);
+  snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%s"), SUB_PREFIX, MQTTTopic, token);
   token = strtok(NULL, "");
   snprintf_P(svalue, sizeof(svalue), PSTR("%s"), (token == NULL) ? "" : token);
   mqttDataCb(stopic, (byte*)svalue, strlen(svalue));
@@ -1338,32 +1339,32 @@ void hlw_margin_chk()
 //    addLog(LOG_LEVEL_DEBUG, log);
     
     if (hlw_margin(0, sysCfg.hlw_pmin, pw, flag, hlw_pminflg)) {
-      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/POWER_LOW"), PUB_PREFIX2, sysCfg.mqtt_topic);
+      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/POWER_LOW"), PUB_PREFIX2, MQTTTopic);
       strlcpy(svalue, (flag) ? MQTT_STATUS_ON : MQTT_STATUS_OFF, sizeof(svalue));
       mqtt_publish(stopic, svalue);
     }
     if (hlw_margin(1, sysCfg.hlw_pmax, pw, flag, hlw_pmaxflg)) {
-      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/POWER_HIGH"), PUB_PREFIX2, sysCfg.mqtt_topic);
+      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/POWER_HIGH"), PUB_PREFIX2, MQTTTopic);
       strlcpy(svalue, (flag) ? MQTT_STATUS_ON : MQTT_STATUS_OFF, sizeof(svalue));
       mqtt_publish(stopic, svalue);
     }
     if (hlw_margin(0, sysCfg.hlw_umin, pu, flag, hlw_uminflg)) {
-      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/VOLTAGE_LOW"), PUB_PREFIX2, sysCfg.mqtt_topic);
+      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/VOLTAGE_LOW"), PUB_PREFIX2, MQTTTopic);
       strlcpy(svalue, (flag) ? MQTT_STATUS_ON : MQTT_STATUS_OFF, sizeof(svalue));
       mqtt_publish(stopic, svalue);
     }
     if (hlw_margin(1, sysCfg.hlw_umax, pw, flag, hlw_umaxflg)) {
-      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/VOLTAGE_HIGH"), PUB_PREFIX2, sysCfg.mqtt_topic);
+      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/VOLTAGE_HIGH"), PUB_PREFIX2, MQTTTopic);
       strlcpy(svalue, (flag) ? MQTT_STATUS_ON : MQTT_STATUS_OFF, sizeof(svalue));
       mqtt_publish(stopic, svalue);
     }
     if (hlw_margin(0, sysCfg.hlw_imin, piv, flag, hlw_iminflg)) {
-      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/CURRENT_LOW"), PUB_PREFIX2, sysCfg.mqtt_topic);
+      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/CURRENT_LOW"), PUB_PREFIX2, MQTTTopic);
       strlcpy(svalue, (flag) ? MQTT_STATUS_ON : MQTT_STATUS_OFF, sizeof(svalue));
       mqtt_publish(stopic, svalue);
     }
     if (hlw_margin(1, sysCfg.hlw_imax, piv, flag, hlw_imaxflg)) {
-      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/CURRENT_HIGH"), PUB_PREFIX2, sysCfg.mqtt_topic);
+      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/CURRENT_HIGH"), PUB_PREFIX2, MQTTTopic);
       strlcpy(svalue, (flag) ? MQTT_STATUS_ON : MQTT_STATUS_OFF, sizeof(svalue));
       mqtt_publish(stopic, svalue);
     }
@@ -1377,7 +1378,7 @@ void hlw_margin_chk()
       } else {
         hlw_mplh_counter--;
         if (!hlw_mplh_counter) {
-          snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/MAX_POWER_REACHED"), PUB_PREFIX, sysCfg.mqtt_topic);
+          snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/MAX_POWER_REACHED"), PUB_PREFIX, MQTTTopic);
           snprintf_P(svalue, sizeof(svalue), PSTR("%d%s"), pw, (sysCfg.mqtt_units) ? " W" : "");
           mqtt_publish(stopic, svalue);
           do_cmnd_power(1, 0);
@@ -1398,11 +1399,11 @@ void hlw_margin_chk()
         if (hlw_mplr_counter) {
           hlw_mplr_counter--;
           if (hlw_mplr_counter) {
-            snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/MAX_POWER_MONITOR"), PUB_PREFIX, sysCfg.mqtt_topic);
+            snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/MAX_POWER_MONITOR"), PUB_PREFIX, MQTTTopic);
             mqtt_publish(stopic, MQTT_STATUS_ON);
             do_cmnd_power(1, 1);
           } else {
-            snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/MAX_POWER_REACHED_RETRY"), PUB_PREFIX, sysCfg.mqtt_topic);
+            snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/MAX_POWER_REACHED_RETRY"), PUB_PREFIX, MQTTTopic);
             mqtt_publish(stopic, MQTT_STATUS_OFF);
           }
         }
@@ -1414,12 +1415,12 @@ void hlw_margin_chk()
     uped = (uint16_t)(ped * 1000);
     if (!hlw_mdpls_flag && (rtcTime.Hour == sysCfg.hlw_mdpls)) {
       hlw_mdpls_flag = 1;
-      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/MAX_DAILY_ENERGY_MONITOR"), PUB_PREFIX, sysCfg.mqtt_topic);
+      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/MAX_DAILY_ENERGY_MONITOR"), PUB_PREFIX, MQTTTopic);
       mqtt_publish(stopic, MQTT_STATUS_ON);
       do_cmnd_power(1, 1);
     }
     else if (hlw_mdpls_flag && (uped > sysCfg.hlw_mdpl)) {
-      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/MAX_DAILY_ENERGY_REACHED"), PUB_PREFIX, sysCfg.mqtt_topic);
+      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/MAX_DAILY_ENERGY_REACHED"), PUB_PREFIX, MQTTTopic);
       dtostrf(ped, 1, 3, svalue);
       snprintf_P(svalue, sizeof(svalue), PSTR("%s%s"), svalue, (sysCfg.mqtt_units) ? " kWh" : "");
       mqtt_publish(stopic, svalue);
@@ -1451,7 +1452,7 @@ void detect_sensor() {
 #ifdef SEND_TELEMETRY_DS18B20
   addLog_P(LOG_LEVEL_DEBUG, PSTR("APP: Try to detect DS18B20..."));
   dsb_readTempPrep();
-  delay(1000);
+  delay(1000); // give the sensor a little bit time to initialize
   float t;
   if (dsb_readTemp(t)) { 
     detected_sensor = SEND_TELEMETRY_DS18B20;
@@ -1500,7 +1501,7 @@ void every_second()
     status_update_timer--;
     if (!status_update_timer) {
       for (i = 0; i < Maxdevice; i++) {
-        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%d/%s"), PUB_PREFIX, sysCfg.mqtt_topic, i +1, sysCfg.mqtt_subtopic);
+        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%d/%s"), PUB_PREFIX, MQTTTopic, i +1, sysCfg.mqtt_subtopic);
         strlcpy(svalue, (power & (0x01 << i)) ? MQTT_STATUS_ON : MQTT_STATUS_OFF, sizeof(svalue));
         mqtt_publish(stopic, svalue);
       }
@@ -1559,7 +1560,7 @@ void every_second()
       tele_period = 0;
 
       if (sysCfg.message_format == JSON) {
-        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/TELEMETRY"), PUB_PREFIX2, sysCfg.mqtt_topic);
+        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/TELEMETRY"), PUB_PREFIX2, MQTTTopic);
         snprintf_P(svalue, sizeof(svalue), PSTR("{\"Uptime\":%d"), uptime);
         for (i = 0; i < Maxdevice; i++) {
           if (Maxdevice == 1) {  // Legacy
@@ -1575,9 +1576,9 @@ void every_second()
       if (sysCfg.message_format != JSON) {
         for (i = 0; i < Maxdevice; i++) {
           if (Maxdevice == 1) {  // Legacy
-            snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%s"), PUB_PREFIX2, sysCfg.mqtt_topic, sysCfg.mqtt_subtopic);
+            snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%s"), PUB_PREFIX2, MQTTTopic, sysCfg.mqtt_subtopic);
           } else {
-            snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%d/%s"), PUB_PREFIX2, sysCfg.mqtt_topic, i +1, sysCfg.mqtt_subtopic);
+            snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%d/%s"), PUB_PREFIX2, MQTTTopic, i +1, sysCfg.mqtt_subtopic);
           }
           strlcpy(svalue, (power & (0x01 << i)) ? MQTT_STATUS_ON : MQTT_STATUS_OFF, sizeof(svalue));
           mqtt_publish(stopic, svalue);
@@ -1587,7 +1588,7 @@ void every_second()
 
 #ifdef SEND_TELEMETRY_UPTIME
       if (sysCfg.message_format != JSON) {
-        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/UPTIME"), PUB_PREFIX2, sysCfg.mqtt_topic);
+        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/UPTIME"), PUB_PREFIX2, MQTTTopic);
         snprintf_P(svalue, sizeof(svalue), PSTR("%d%s"), uptime, (sysCfg.mqtt_units) ? " Hr" : "");
         mqtt_publish(stopic, svalue);
       }
@@ -1597,7 +1598,7 @@ void every_second()
       if (sysCfg.message_format == JSON) {
           snprintf_P(svalue, sizeof(svalue), PSTR("%s, \"RSSI\":%d"), svalue, WIFI_getRSSIasQuality(WiFi.RSSI()));
       } else {
-        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/RSSI"), PUB_PREFIX2, sysCfg.mqtt_topic);
+        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/RSSI"), PUB_PREFIX2, MQTTTopic);
         snprintf_P(svalue, sizeof(svalue), PSTR("%d%s"), WIFI_getRSSIasQuality(WiFi.RSSI()), (sysCfg.mqtt_units) ? " %" : "");
         mqtt_publish(stopic, svalue);
       }
@@ -1616,10 +1617,10 @@ void every_second()
           if (sysCfg.message_format == JSON) {
             snprintf_P(svalue, sizeof(svalue), PSTR("%s, \"DHT\":{\"Temperature\":\"%s\", \"Humidity\":\"%s\"}"), svalue, stemp1, stemp2);
           } else {
-            snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/DHT/TEMPERATURE"), PUB_PREFIX2, sysCfg.mqtt_topic);
+            snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/DHT/TEMPERATURE"), PUB_PREFIX2, MQTTTopic);
             snprintf_P(svalue, sizeof(svalue), PSTR("%s%s"), stemp1, (sysCfg.mqtt_units) ? " C" : "");
             mqtt_publish(stopic, svalue);
-            snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/DHT/HUMIDITY"), PUB_PREFIX2, sysCfg.mqtt_topic);
+            snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/DHT/HUMIDITY"), PUB_PREFIX2, MQTTTopic);
             snprintf_P(svalue, sizeof(svalue), PSTR("%s%s"), stemp2, (sysCfg.mqtt_units) ? " %" : "");
             mqtt_publish(stopic, svalue);
           }
@@ -1633,7 +1634,7 @@ void every_second()
           if (sysCfg.message_format == JSON) {
             snprintf_P(svalue, sizeof(svalue), PSTR("%s, \"DS18B20\":{\"Temperature\":\"%s\"}"), svalue, stemp1);
           } else {
-            snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/DS18B20/TEMPERATURE"), PUB_PREFIX2, sysCfg.mqtt_topic);
+            snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/DS18B20/TEMPERATURE"), PUB_PREFIX2, MQTTTopic);
             snprintf_P(svalue, sizeof(svalue), PSTR("%s%s"), stemp1, (sysCfg.mqtt_units) ? " C" : "");
             mqtt_publish(stopic, svalue);
           }
@@ -1656,10 +1657,10 @@ void every_second()
                 svalue, stemp1, i +1, ds18x20_type(i).c_str(), ds18x20_address(i).c_str(), stemp2);
               strcpy(stemp1, ", ");
             } else {
-              snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%s/%d/ADDRESS"), PUB_PREFIX2, sysCfg.mqtt_topic, ds18x20_type(i).c_str(), i +1);
+              snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%s/%d/ADDRESS"), PUB_PREFIX2, MQTTTopic, ds18x20_type(i).c_str(), i +1);
               snprintf_P(svalue, sizeof(svalue), PSTR("%s"), ds18x20_address(i).c_str());
               mqtt_publish(stopic, svalue);
-              snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%s/%d/TEMPERATURE"), PUB_PREFIX2, sysCfg.mqtt_topic, ds18x20_type(i).c_str(), i +1);
+              snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%s/%d/TEMPERATURE"), PUB_PREFIX2, MQTTTopic, ds18x20_type(i).c_str(), i +1);
               snprintf_P(svalue, sizeof(svalue), PSTR("%s%s"), stemp2, (sysCfg.mqtt_units) ? " C" : "");
               mqtt_publish(stopic, svalue);
             }
@@ -1683,24 +1684,24 @@ void every_second()
         snprintf_P(svalue, sizeof(svalue), PSTR("%s, \"Energy\":{\"Energy Yesterday\":\"%s\", \"Total Energy Today\":\"%s\", \"Period Energy\":%d, \"Current Power\":%d, \"Power Factor\":\"%s\", \"Voltage\":%d, \"Current\":\"%s\"}"),
           svalue, stemp0, stemp1, pe, pw, stemp2, pu, stemp3);
       } else {
-        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/YESTERDAY_ENERGY"), PUB_PREFIX2, sysCfg.mqtt_topic);
+        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/YESTERDAY_ENERGY"), PUB_PREFIX2, MQTTTopic);
         snprintf_P(svalue, sizeof(svalue), PSTR("%s%s"), stemp0, (sysCfg.mqtt_units) ? " kWh" : "");
         mqtt_publish(stopic, svalue);
-        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/TODAY_ENERGY"), PUB_PREFIX2, sysCfg.mqtt_topic);
+        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/TODAY_ENERGY"), PUB_PREFIX2, MQTTTopic);
         snprintf_P(svalue, sizeof(svalue), PSTR("%s%s"), stemp1, (sysCfg.mqtt_units) ? " kWh" : "");
         mqtt_publish(stopic, svalue);
-        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/PERIOD_ENERGY"), PUB_PREFIX2, sysCfg.mqtt_topic);
+        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/PERIOD_ENERGY"), PUB_PREFIX2, MQTTTopic);
         snprintf_P(svalue, sizeof(svalue), PSTR("%d%s"), pe, (sysCfg.mqtt_units) ? " Wh" : "");
         mqtt_publish(stopic, svalue);
-        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/CURRENT_POWER"), PUB_PREFIX2, sysCfg.mqtt_topic);
+        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/CURRENT_POWER"), PUB_PREFIX2, MQTTTopic);
         snprintf_P(svalue, sizeof(svalue), PSTR("%d%s"), pw, (sysCfg.mqtt_units) ? " W" : "");
         mqtt_publish(stopic, svalue);
-        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/POWER_FACTOR"), PUB_PREFIX2, sysCfg.mqtt_topic);
+        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/POWER_FACTOR"), PUB_PREFIX2, MQTTTopic);
         mqtt_publish(stopic, stemp2);
-        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/VOLTAGE"), PUB_PREFIX2, sysCfg.mqtt_topic);
+        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/VOLTAGE"), PUB_PREFIX2, MQTTTopic);
         snprintf_P(svalue, sizeof(svalue), PSTR("%d%s"), pu, (sysCfg.mqtt_units) ? " V" : "");
         mqtt_publish(stopic, svalue);
-        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/CURRENT"), PUB_PREFIX2, sysCfg.mqtt_topic);
+        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/CURRENT"), PUB_PREFIX2, MQTTTopic);
         snprintf_P(svalue, sizeof(svalue), PSTR("%s%s"), stemp3, (sysCfg.mqtt_units) ? " A" : "");
         mqtt_publish(stopic, svalue);
       }
@@ -1711,7 +1712,7 @@ void every_second()
         snprintf_P(svalue, sizeof(svalue), PSTR("%s, \"Time\":\"%04d-%02d-%02dT%02d:%02d:%02d\"}"),
           svalue, rtcTime.Year, rtcTime.Month, rtcTime.Day, rtcTime.Hour, rtcTime.Minute, rtcTime.Second);
       } else {
-        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/TIME"), PUB_PREFIX2, sysCfg.mqtt_topic);
+        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/TIME"), PUB_PREFIX2, MQTTTopic);
         snprintf_P(svalue, sizeof(svalue), PSTR("%04d-%02d-%02dT%02d:%02d:%02d"),
           rtcTime.Year, rtcTime.Month, rtcTime.Day, rtcTime.Hour, rtcTime.Minute, rtcTime.Second);
       }
@@ -1726,10 +1727,10 @@ void every_second()
   if ((rtcTime.Minute == 2) && (rtcTime.Second == 30)) { 
     uptime++;
     if (sysCfg.message_format == JSON) {
-      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/TELEMETRY"), PUB_PREFIX2, sysCfg.mqtt_topic);
+      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/TELEMETRY"), PUB_PREFIX2, MQTTTopic);
       snprintf_P(svalue, sizeof(svalue), PSTR("{\"Uptime\":%d}"), uptime);
     } else {
-      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/UPTIME"), PUB_PREFIX2, sysCfg.mqtt_topic);
+      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/UPTIME"), PUB_PREFIX2, MQTTTopic);
       snprintf_P(svalue, sizeof(svalue), PSTR("%d%s"), uptime, (sysCfg.mqtt_units) ? " Hr" : "");
     }
     mqtt_publish(stopic, svalue);
@@ -1833,7 +1834,7 @@ void stateloop()
       }
       if (otaflag == 10) {  // Allow MQTT to reconnect
         otaflag = 0;
-        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/UPGRADE"), PUB_PREFIX, sysCfg.mqtt_topic);
+        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/UPGRADE"), PUB_PREFIX, MQTTTopic);
         if (otaok) {
           snprintf_P(svalue, sizeof(svalue), PSTR("Successful. Restarting"));
           restartflag = 2;
@@ -1998,20 +1999,46 @@ void setup()
   power = ((0x00FF << Maxdevice) >> 8) & sysCfg.power;
   syslog_level = sysCfg.syslog_level;
 
-  if (strstr(sysCfg.hostname, "%")) strlcpy(sysCfg.hostname, DEF_WIFI_HOSTNAME, sizeof(sysCfg.hostname));
-  if (!strcmp(sysCfg.hostname, DEF_WIFI_HOSTNAME)) {
-    snprintf_P(Hostname, sizeof(Hostname)-1, sysCfg.hostname, sysCfg.mqtt_topic, ESP.getChipId() & 0x1FFF);
-  } else {
-    snprintf_P(Hostname, sizeof(Hostname)-1, sysCfg.hostname);
-  }
-  WIFI_Connect(Hostname);
+  // keep mac for replacement
+  char mac[7];
+  snprintf_P(mac, sizeof(mac), "%06X", ESP.getChipId());
 
-  if (strstr(sysCfg.mqtt_client, "%")) strlcpy(sysCfg.mqtt_client, DEF_MQTT_CLIENT_ID, sizeof(sysCfg.mqtt_client));
-  if (!strcmp(sysCfg.mqtt_client, DEF_MQTT_CLIENT_ID)) {
-    snprintf_P(MQTTClient, sizeof(MQTTClient), sysCfg.mqtt_client, ESP.getChipId());
-  } else {
-    snprintf_P(MQTTClient, sizeof(MQTTClient), sysCfg.mqtt_client);
+  // apply client replacement
+  // if no client id is set, copy default
+  if (strlen(MQTTClient) == 0) strlcpy(MQTTClient, DEF_MQTT_CLIENT_ID, sizeof(MQTTClient));
+  String ClientBuf = strdup(MQTTClient);
+  // replace
+  if (strstr(MQTTClient, "{mac}")) {
+    ClientBuf.replace("{mac}", mac);
+  } 
+  ClientBuf.toCharArray(MQTTClient, 33);
+
+  // apply topic replacement
+  // if no topic is configured, copy default hostname
+  if (strlen(sysCfg.mqtt_topic) == 0) strlcpy(sysCfg.mqtt_topic, MQTT_TOPIC, sizeof(sysCfg.mqtt_topic));
+  String TopicBuf = strdup(sysCfg.mqtt_topic);
+  // replace
+  if (strstr(sysCfg.mqtt_topic, "{mac}")) {
+    TopicBuf.replace("{mac}", mac);
+  } 
+  TopicBuf.toCharArray(MQTTTopic, 32);
+  
+  // apply hostname replacement
+  // if no hostname is configured, copy default hostname
+  if (strlen(sysCfg.hostname) == 0) strlcpy(sysCfg.hostname, DEF_WIFI_HOSTNAME, sizeof(sysCfg.hostname));
+  String HostnameBuf = strdup(sysCfg.hostname);
+  // replace
+  if (strstr(sysCfg.hostname, "{mac}")) {
+    HostnameBuf.replace("{mac}", mac);
+  } 
+  if (strstr(sysCfg.hostname, "{topic}")) {
+    HostnameBuf.replace("{topic}", sysCfg.mqtt_topic);
   }
+  HostnameBuf.toCharArray(Hostname, 33); 
+  // ---
+  
+  WIFI_Connect(Hostname);
+    
   mqttClient.setServer(sysCfg.mqtt_host, sysCfg.mqtt_port);
   mqttClient.setCallback(mqttDataCb);
 
@@ -2035,7 +2062,7 @@ void setup()
 #endif  // USE_POWERMONITOR
 
   snprintf_P(log, sizeof(log), PSTR("APP: Project %s (Topic %s, Fallback %s, GroupTopic %s) Version %s"),
-    PROJECT, sysCfg.mqtt_topic, MQTTClient, sysCfg.mqtt_grptopic, Version);
+    PROJECT, MQTTTopic, MQTTClient, sysCfg.mqtt_grptopic, Version);
   addLog(LOG_LEVEL_INFO, log);
 }
 

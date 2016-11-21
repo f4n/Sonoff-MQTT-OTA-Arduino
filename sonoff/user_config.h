@@ -17,7 +17,7 @@
 // Wifi
 #define STA_SSID               "indebuurt3"      // Wifi SSID
 #define STA_PASS               "VnsqrtnrsddbrN"  // Wifi password
-#define WIFI_HOSTNAME          "%s-%04d"         // Expands to <MQTT_TOPIC>-<last 4 decimal chars of MAC address>
+#define WIFI_HOSTNAME          "sonoff-{mac}"    // Expands to sonoff-<last 6 chars of MAC address>
 #define WIFI_CONFIG_TOOL       WIFI_WPSCONFIG    // Default tool if wifi fails to connect (WIFI_SMARTCONFIG, WIFI_MANAGER or WIFI_WPSCONFIG)
 
 // Syslog
@@ -38,7 +38,7 @@
 #define MQTT_HOST              "domus1"
 #define MQTT_PORT              1883
 
-#define MQTT_CLIENT_ID         "DVES_%06X"  // Also fall back topic using Chip Id = last 6 characters of MAC address
+#define MQTT_CLIENT_ID         "DVES_{mac}"  // Also fall back topic using Chip Id = last 6 characters of MAC address
 #define MQTT_USER              "DVES_USER"
 #define MQTT_PASS              "DVES_PASS"
 
@@ -63,7 +63,7 @@
 #define DOMOTICZ_UPDATE_TIMER  0            // Send relay status (0 = disable, 1 - 3600 seconds) (Optional)
 
 // MQTT - Telemetry
-#define TELE_PERIOD            300          // Telemetry (0 = disable, 10 - 3600 seconds)
+#define TELE_PERIOD            300          // Telemetry (0 = disable, 2 - 3600 seconds)
 #define SEND_TELEMETRY_UPTIME               // Enable sending uptime telemetry (if disabled will still send hourly message)
 #define SEND_TELEMETRY_RSSI                 // Enable sending wifi RSSI telemetry
 #define SEND_TELEMETRY_POWER                // Enable sending power telemetry
@@ -167,7 +167,9 @@
   #error "Select either module SONOFF, SONOFF_POW or ELECTRO_DRAGON"
 #endif
 
-#if defined(SEND_TELEMETRY_DS18B20) || defined(SEND_TELEMETRY_DHT)
-#define USE_EXTERNAL_SENSOR               // Configures to detect the external sensor
+#if defined(SEND_TELEMETRY_DS18B20) && defined(SEND_TELEMETRY_DHT)
+#if DSB_PIN == DHT_PIN
+  #error "Select either SEND_TELEMETRY_DS18B20 or SEND_TELEMETRY_DHT or use different GPIOs"
+#endif
 #endif
 

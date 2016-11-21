@@ -526,13 +526,7 @@ void handleWifi(boolean scan)
 
   page += FPSTR(HTTP_FORM_WIFI);
 
-  char str[33];
-  if (!strcmp(WIFI_HOSTNAME, DEF_WIFI_HOSTNAME)) {
-    snprintf_P(str, sizeof(str), PSTR(DEF_WIFI_HOSTNAME), sysCfg.mqtt_topic, ESP.getChipId() & 0x1FFF);
-  } else {
-    snprintf_P(str, sizeof(str), PSTR(WIFI_HOSTNAME));
-  }
-  page.replace("{h0}", str);
+  page.replace("{h0}", WIFI_HOSTNAME);
   page.replace("{h1}", String(sysCfg.hostname));
   page.replace("{s1}", String(sysCfg.sta_ssid));
   page.replace("{p1}", String(sysCfg.sta_pwd));

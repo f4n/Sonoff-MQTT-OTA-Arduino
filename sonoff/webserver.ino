@@ -385,6 +385,9 @@ void handleRoot()
         dtostrf(st, 1, DSB_RESOLUTION &3, stemp);
         page += F("<tr><td>DSB Temperature: </td><td>"); page += stemp; page += F("&deg;C</td></tr>");
         page += F("</table><br/>");
+
+        // prepare next read
+        dsb_readTempPrep();
       }
     }
 #endif  // SEND_TELEMETRY_DS18B20

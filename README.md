@@ -14,6 +14,11 @@ Current version is **2.1.1a-f4n** - See ```sonoff/_releasenotes.ino``` for chang
 
 
 
+
+
+
+
+
 # Original Description:
 
 Starting with version 2.0.0 the following hardware devices are supported:

@@ -1656,6 +1656,26 @@ void detect_sensor() {
   addLog_P(LOG_LEVEL_DEBUG, PSTR("APP: ... false"));
 #endif  // SEND_TELEMETRY_DS18B20
 
+
+#ifdef SEND_TELEMETRY_I2C
+  char log[LOGSZ];
+  addLog_P(LOG_LEVEL_DEBUG, PSTR("APP: Try to detect I2C sensors..."));
+  Wire.begin(I2C_SDA_PIN,I2C_SCL_PIN);
+  if (htu_detect()) {
+    detected_sensor = SEND_TELEMETRY_I2C;
+    snprintf_P(log, sizeof(log), PSTR("APP: ... %s detected at address 0x%x"), htu_type(), htu_address());
+    addLog(LOG_LEVEL_DEBUG, log);
+    return;
+  }
+  if (bmp_detect()) {
+    detected_sensor = SEND_TELEMETRY_I2C;
+    snprintf_P(log, sizeof(log), PSTR("APP: ... %s detected at address 0x%x"), bmp_type(), bmp_address());
+    addLog(LOG_LEVEL_DEBUG, log);
+    return;
+  }
+  addLog_P(LOG_LEVEL_DEBUG, PSTR("APP: ... false"));
+#endif // SEND_TELEMETRY_I2C
+
   addLog_P(LOG_LEVEL_INFO, PSTR("APP: No external sensor detected!"));
 
 }
@@ -1751,18 +1771,20 @@ void every_second()
 
       }
 
-#endif  // USE_EXTERNAL_SENSOR
-
 #ifdef SEND_TELEMETRY_I2C
-      if (htu_detect()) {
-        snprintf_P(log, sizeof(log), PSTR("I2C: %s found at address 0x%x"), htu_type(), htu_address());
-        addLog(LOG_LEVEL_DEBUG, log);
-      }
-      if (bmp_detect()) {
-        snprintf_P(log, sizeof(log), PSTR("I2C: %s found at address 0x%x"), bmp_type(), bmp_address());
-        addLog(LOG_LEVEL_DEBUG, log);
-      }
+      } else if ( detected_sensor == SEND_TELEMETRY_I2C ) {
+        if (htu_detect()) {
+          //snprintf_P(log, sizeof(log), PSTR("I2C: %s found at address 0x%x"), htu_type(), htu_address());
+          //addLog(LOG_LEVEL_DEBUG, log);
+        }
+        if (bmp_detect()) {
+          //snprintf_P(log, sizeof(log), PSTR("I2C: %s found at address 0x%x"), bmp_type(), bmp_address());
+          //addLog(LOG_LEVEL_DEBUG, log);
+        }
 #endif // SEND_TELEMETRY_I2C
+
+
+#endif  // USE_EXTERNAL_SENSOR
 
     }
     if (tele_period >= sysCfg.tele_period) {
@@ -1878,61 +1900,63 @@ void every_second()
         }
 #endif  // SEND_TELEMETRY_DHT/2
 
+#ifdef SEND_TELEMETRY_I2C
+      } else if ( detected_sensor == SEND_TELEMETRY_I2C ) {
+        if(htu_found())
+        {
+          t = htu21_readTemperature();
+          h = htu21_readHumidity();
+          h = htu21_compensatedHumidity(h, t);
+          dtostrf(t, 1, TEMP_RESOLUTION &3, stemp1);
+          dtostrf(h, 1, HUMIDITY_RESOLUTION &3, stemp2);
+          if (sysCfg.message_format == JSON) {
+            snprintf_P(svalue, sizeof(svalue), PSTR("%s, \"%s\":{\"Temperature\":\"%s\", \"Humidity\":\"%s\"}"),
+              svalue, htu_type(), stemp1, stemp2);
+          } else
+          {
+            snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%s/TEMPERATURE"), PUB_PREFIX2, MQTTTopic, htu_type());
+            snprintf_P(svalue, sizeof(svalue), PSTR("%s%s"), stemp1, (sysCfg.mqtt_units) ? " C" : "");
+            mqtt_publish(stopic, svalue);
+            snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%s/HUMIDITY"), PUB_PREFIX2, MQTTTopic, htu_type());
+            snprintf_P(svalue, sizeof(svalue), PSTR("%s%s"), stemp2, (sysCfg.mqtt_units) ? " %" : "");
+            mqtt_publish(stopic, svalue);
+          }
+        }
+        if(bmp_found())
+        {
+          double t_bmp = bmp_readTemperature();
+          double p_bmp = bmp_readPressure();
+          double h_bmp = bmp_readHumidity();
+          dtostrf(t_bmp, 1, TEMP_RESOLUTION &3, stemp1);
+          dtostrf(p_bmp, 1, PRESSURE_RESOLUTION &3, stemp2);
+          dtostrf(h_bmp, 1, HUMIDITY_RESOLUTION &3, stemp3);
+          if (sysCfg.message_format == JSON) {
+            if (!strcmp(bmp_type(),"BME280")) {
+              snprintf_P(svalue, sizeof(svalue), PSTR("%s, \"%s\":{\"Temperature\":\"%s\", \"Humidity\":\"%s\", \"Pressure\":\"%s\"}"),
+                svalue, bmp_type(), stemp1, stemp3, stemp2);
+            } else {
+              snprintf_P(svalue, sizeof(svalue), PSTR("%s, \"%s\":{\"Temperature\":\"%s\", \"Pressure\":\"%s\"}"),
+                svalue, bmp_type(), stemp1, stemp2);
+            }
+          } else {
+            snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%s/TEMPERATURE"), PUB_PREFIX2, MQTTTopic, bmp_type());
+            snprintf_P(svalue, sizeof(svalue), PSTR("%s%s"), stemp1, (sysCfg.mqtt_units) ? " C" : "");
+            mqtt_publish(stopic, svalue);
+            if (!strcmp(bmp_type(),"BME280")) {
+              snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%s/HUMIDITY"), PUB_PREFIX2, MQTTTopic, bmp_type());
+              snprintf_P(svalue, sizeof(svalue), PSTR("%s%s"), stemp3, (sysCfg.mqtt_units) ? " %" : "");
+              mqtt_publish(stopic, svalue);
+            }
+            snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%s/PRESSURE"), PUB_PREFIX2, MQTTTopic, bmp_type());
+            snprintf_P(svalue, sizeof(svalue), PSTR("%s%s"), stemp2, (sysCfg.mqtt_units) ? " mbar" : "");
+            mqtt_publish(stopic, svalue);
+          }
+        }
+#endif // SEND_TELEMETRY_I2C
+
       }
 #endif  // USE_EXTERNAL_SENSOR
 
-#ifdef SEND_TELEMETRY_I2C
-      if(htu_found())
-      {
-        t = htu21_readTemperature();
-        h = htu21_readHumidity();
-        h = htu21_compensatedHumidity(h, t);
-        dtostrf(t, 1, TEMP_RESOLUTION &3, stemp1);
-        dtostrf(h, 1, HUMIDITY_RESOLUTION &3, stemp2);
-        if (sysCfg.message_format == JSON) {
-          snprintf_P(svalue, sizeof(svalue), PSTR("%s, \"%s\":{\"Temperature\":\"%s\", \"Humidity\":\"%s\"}"),
-            svalue, htu_type(), stemp1, stemp2);
-        } else
-        {
-          snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%s/TEMPERATURE"), PUB_PREFIX2, sysCfg.mqtt_topic, htu_type());
-          snprintf_P(svalue, sizeof(svalue), PSTR("%s%s"), stemp1, (sysCfg.mqtt_units) ? " C" : "");
-          mqtt_publish(stopic, svalue);
-          snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%s/HUMIDITY"), PUB_PREFIX2, sysCfg.mqtt_topic, htu_type());
-          snprintf_P(svalue, sizeof(svalue), PSTR("%s%s"), stemp2, (sysCfg.mqtt_units) ? " %" : "");
-          mqtt_publish(stopic, svalue);
-        }
-      }
-      if(bmp_found())
-      {
-        double t_bmp = bmp_readTemperature();
-        double p_bmp = bmp_readPressure();
-        double h_bmp = bmp_readHumidity();
-        dtostrf(t_bmp, 1, TEMP_RESOLUTION &3, stemp1);
-        dtostrf(p_bmp, 1, PRESSURE_RESOLUTION &3, stemp2);
-        dtostrf(h_bmp, 1, HUMIDITY_RESOLUTION &3, stemp3);
-        if (sysCfg.message_format == JSON) {
-          if (!strcmp(bmp_type(),"BME280")) {
-            snprintf_P(svalue, sizeof(svalue), PSTR("%s, \"%s\":{\"Temperature\":\"%s\", \"Humidity\":\"%s\", \"Pressure\":\"%s\"}"),
-              svalue, bmp_type(), stemp1, stemp3, stemp2);
-          } else {
-            snprintf_P(svalue, sizeof(svalue), PSTR("%s, \"%s\":{\"Temperature\":\"%s\", \"Pressure\":\"%s\"}"),
-              svalue, bmp_type(), stemp1, stemp2);
-          }
-        } else {
-          snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%s/TEMPERATURE"), PUB_PREFIX2, sysCfg.mqtt_topic, bmp_type());
-          snprintf_P(svalue, sizeof(svalue), PSTR("%s%s"), stemp1, (sysCfg.mqtt_units) ? " C" : "");
-          mqtt_publish(stopic, svalue);
-          if (!strcmp(bmp_type(),"BME280")) {
-            snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%s/HUMIDITY"), PUB_PREFIX2, sysCfg.mqtt_topic, bmp_type());
-            snprintf_P(svalue, sizeof(svalue), PSTR("%s%s"), stemp3, (sysCfg.mqtt_units) ? " %" : "");
-            mqtt_publish(stopic, svalue);
-          }
-          snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%s/PRESSURE"), PUB_PREFIX2, sysCfg.mqtt_topic, bmp_type());
-          snprintf_P(svalue, sizeof(svalue), PSTR("%s%s"), stemp2, (sysCfg.mqtt_units) ? " mbar" : "");
-          mqtt_publish(stopic, svalue);
-        }
-      }
-#endif // SEND_TELEMETRY_I2C
 
 #ifdef USE_POWERMONITOR
 #ifdef SEND_TELEMETRY_ENERGY
@@ -2364,10 +2388,6 @@ void setup()
 #ifdef USE_EXTERNAL_SENSOR
   detect_sensor();
 #endif // USE_EXTERNAL_SENSOR
-
-#ifdef SEND_TELEMETRY_I2C
-  Wire.begin(I2C_SDA_PIN,I2C_SCL_PIN);
-#endif // SEND_TELEMETRY_I2C
 
 #ifdef USE_POWERMONITOR
   hlw_init();

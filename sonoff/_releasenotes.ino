@@ -1,5 +1,6 @@
 /* 2.1.1a-f4n
- * Merge
+ * Autodetection for external I2C devices (like BME/BMP sensors)
+ * Merge 2.1.1a
  *
  *
  * 2.1.1a 20161203
@@ -36,7 +37,7 @@
  *
  *
  * 2.0.17-f4n
- * Merge
+ * Merge 2.0.17
  *
  *
  * 2.0.17 20161123

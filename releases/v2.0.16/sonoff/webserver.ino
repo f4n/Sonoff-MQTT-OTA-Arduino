@@ -27,9 +27,9 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #ifdef USE_WEBSERVER
 /*********************************************************************************************\
- * Web server and WiFi Manager
- *
- * Enables configuration and reconfiguration of WiFi credentials using a Captive Portal
+ * Web server and WiFi Manager 
+ * 
+ * Enables configuration and reconfiguration of WiFi credentials using a Captive Portal 
  * Source by AlexT (https://github.com/tzapu)
 \*********************************************************************************************/
 
@@ -82,9 +82,9 @@ const char HTTP_HEAD[] PROGMEM =
   "button{border:0;border-radius:0.3rem;background-color:#1fa3ec;color:#fff;line-height:2.4rem;font-size:1.2rem;width:100%;-webkit-transition-duration:0.4s;transition-duration:0.4s;}"
   "button:hover{background-color:#006cba;}"
   ".q{float:right;width:64px;text-align:right;}"
-  ".l{background:url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAMAAABEpIrGAAAAQlBMVEUAAAC/wcHR0dFCRUVTVVVTVVVhY2OCgoKBg4ORk5OfoqLAwMC+vr4zNjZCRERhZGSCg4Nyc3MEBwczNjYjJi"
-  "YUFxdkB9QAAAAAEnRSTlMANQ7q3tLQz8KTXkEV+/bhvbF89BJgAAAAd0lEQVQ4y+2OSw6AIAxEBRUE/PK5/1WdGCAmFN2wMXFWr53ppF1b6dFCo675vY3qad/ZLEf5A4xwMKY8YCh9g/XCL1yBpggIbHlkdAjqgy2xor5AwZSYYaACe+IZw"
-  "2MDrwTkW4PMQxHwlpC/n5P6A98MBMoPXRudn5ofYO1wNYwAAAAASUVORK5CYII=') no-repeat left center;background-size:1em;}"
+  ".l{background:url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAMAAABEpIrGAAAALVBMVEX///8EBwfBwsLw8PAzNjaCg4NTVVUjJiZDRUUUFxdiZGSho6O"
+  "Sk5Pg4eFydHTCjaf3AAAAZElEQVQ4je2NSw7AIAhEBamKn97/uMXEGBvozkWb9C2Zx4xzWykBhFAeYp9gkLyZE0zIMno9n4g19hmdY39scwqVkOXaxph0ZCXQcqxSpgQpONa59wkRDOL93eA"
+  "XvimwlbPbwwVAegLS1HGfZAAAAABJRU5ErkJggg==') no-repeat left center;background-size:1em;}"
   "</style>"
   "</head>"
   "<body>"
@@ -112,9 +112,9 @@ const char HTTP_BTN_MAIN[] PROGMEM =
 const char HTTP_BTN_CONF[] PROGMEM =
   "<br/><br/><form action='/cn' method='post'><button>Configuration menu</button></form>";
 const char HTTP_LNK_ITEM[] PROGMEM =
-  "<div><a href='#p' onclick='c(this)'><button>{v}&nbsp;<span class='q {i}'>{r}%</span></button></a></div>";
+  "<div><a href='#p' onclick='c(this)'>{v}</a>&nbsp;<span class='q {i}'>{r}%</span></div>";
 const char HTTP_LNK_SCAN[] PROGMEM =
-  "<div><a href='/w1'><button>Scan for wifi networks</button></a></div><br/>";
+  "<div><a href='/w1'>Scan for wifi networks</a></div><br/>";
 const char HTTP_FORM_WIFI[] PROGMEM =
   "<fieldset><legend><b>&nbsp;Wifi parameters&nbsp;</b></legend><form method='post' action='sv'>"
   "<input id='w' name='w' value='1' hidden><input id='r' name='r' value='1' hidden>"
@@ -130,7 +130,7 @@ const char HTTP_FORM_MQTT[] PROGMEM =
   "<br/><b>User</b> (" MQTT_USER ")<br/><input id='mu' name='mu' length=32 placeholder='" MQTT_USER "' value='{m4}'><br/>"
 //  "<br/><b>Password</b> (" MQTT_PASS ")<br/><input id='mp' name='mp' length=32 placeholder='" MQTT_PASS "' value='{m5}'><br/>"
   "<br/><b>Password</b><br/><input id='mp' name='mp' length=32 type='password' placeholder='" MQTT_PASS "' value='{m5}'><br/>"
-  "<br/><b>Topic</b> ({m7})<br/><input id='mt' name='mt' length=32 placeholder='" MQTT_TOPIC" ' value='{m6}'><br/>";
+  "<br/><b>Topic</b> (" MQTT_TOPIC ")<br/><input id='mt' name='mt' length=32 placeholder='" MQTT_TOPIC" ' value='{m6}'><br/>";
 #ifdef USE_DOMOTICZ
 const char HTTP_FORM_DOMOTICZ[] PROGMEM =
   "<fieldset><legend><b>&nbsp;Domoticz parameters&nbsp;</b></legend><form method='post' action='sv'>"
@@ -252,16 +252,6 @@ void stopWebserver()
   }
 }
 
-bool checkAuthentication() {
-#ifdef WEB_SERVER_AUTHENTICATION
-  if(!webServer->authenticate(WEB_SERVER_USER, WEB_SERVER_PASSWORD)) {
-    webServer->requestAuthentication();
-    return false;
-  }
-#endif
-  return true;
-}
-
 void beginWifiManager()
 {
   // setup AP
@@ -310,8 +300,6 @@ void showPage(String &page)
 
 void handleRoot()
 {
-  if ( !checkAuthentication() ) return;
-
   char svalue[MESSZ];
 
   addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Handle root"));
@@ -323,7 +311,7 @@ void handleRoot()
   if (_httpflag == HTTP_MANAGER) {
     handleWifi0();
   } else {
-
+    
     String page = FPSTR(HTTP_HEAD);
 //    page.replace("<meta", "<meta http-equiv=\"refresh\" content=\"4; URL=/\"><meta");                    // Fails Edge (asks for reload)
 //    page.replace("</script>", "setTimeout(function(){window.location.reload(1);},4000);</script>");     // Repeats POST on All
@@ -351,10 +339,9 @@ void handleRoot()
           page += String(idx);
         }
         page += F("</button></form></td>");
-      }
+      }  
       page += F("</tr></table><br/>");
     }
-
 
 #ifdef USE_POWERMONITOR
     float ped, pi, pc;
@@ -376,62 +363,53 @@ void handleRoot()
 #endif  // USE_POWERMONITOR
 
 #ifdef SEND_TELEMETRY_DS18B20
-    if ( detected_sensor == SEND_TELEMETRY_DS18B20 ) {
-      // Needs TelePeriod to refresh data (Do not do it here as it takes too much time)
-      char stemp[10];
-      float st;
-      if (dsb_readTemp(st)) {        // Check if read failed
-        page += F("<table style='width:100%'>");
-        dtostrf(st, 1, DSB_RESOLUTION &3, stemp);
-        page += F("<tr><td>DSB Temperature: </td><td>"); page += stemp; page += F("&deg;C</td></tr>");
-        page += F("</table><br/>");
-
-        // prepare next read
-        dsb_readTempPrep();
-      }
+    // Needs TelePeriod to refresh data (Do not do it here as it takes too much time) 
+    char stemp[10];
+    float st;
+    if (dsb_readTemp(st)) {        // Check if read failed
+      page += F("<table style='width:100%'>");
+      dtostrf(st, 1, DSB_RESOLUTION &3, stemp);
+      page += F("<tr><td>DSB Temperature: </td><td>"); page += stemp; page += F("&deg;C</td></tr>");
+      page += F("</table><br/>");
     }
 #endif  // SEND_TELEMETRY_DS18B20
 
 #ifdef SEND_TELEMETRY_DS18x20
-    if ( detected_sensor == SEND_TELEMETRY_DS18x20 ) {
-      char xtemp[10];
-      float xt;
-      uint8_t xfl = 0, i;
-      for (i = 0; i < ds18x20_sensors(); i++) {
-        if (ds18x20_read(i, xt)) {   // Check if read failed
-          if (!xfl) {
-            page += F("<table style='width:100%'>");
-            xfl = 1;
-          }
-          dtostrf(xt, 1, DSB_RESOLUTION &3, xtemp);
-          page += F("<tr><td>DS"); page += String(i +1); page += F(" Temperature: </td><td>"); page += xtemp; page += F("&deg;C</td></tr>");
+    char xtemp[10];
+    float xt;
+    uint8_t xfl = 0, i;
+    for (i = 0; i < ds18x20_sensors(); i++) {
+      if (ds18x20_read(i, xt)) {   // Check if read failed
+        if (!xfl) {
+          page += F("<table style='width:100%'>");
+          xfl = 1;
         }
+        dtostrf(xt, 1, DSB_RESOLUTION &3, xtemp);
+        page += F("<tr><td>DS"); page += String(i +1); page += F(" Temperature: </td><td>"); page += xtemp; page += F("&deg;C</td></tr>");
       }
-      if (xfl) page += F("</table><br/>");
     }
+    if (xfl) page += F("</table><br/>");
 #endif  // SEND_TELEMETRY_DS18x20
 
-#if defined(SEND_TELEMETRY_DHT) || defined(SEND_TELEMETRY_DHT2)
-    if ( detected_sensor == SEND_TELEMETRY_DHT ) {
-      char dtemp[10];
-      float dt, dh;
-      if (dht_readTempHum(false, dt, dh)) {     // Read temperature as Celsius (the default)
-        page += F("<table style='width:100%'>");
-        dtostrf(dt, 1, DHT_RESOLUTION &3, dtemp);
-        page += F("<tr><td>DHT Temperature: </td><td>"); page += dtemp; page += F("&deg;C</td></tr>");
-        dtostrf(dh, 1, 1, dtemp);
-        page += F("<tr><td>DHT Humidity: </td><td>"); page += dtemp; page += F("%</td></tr>");
-        page += F("</table><br/>");
-      }
+#ifdef SEND_TELEMETRY_DHT
+    char dtemp[10];
+    float dt, dh;
+    if (dht_readTempHum(false, dt, dh)) {     // Read temperature as Celsius (the default)
+      page += F("<table style='width:100%'>");
+      dtostrf(dt, 1, DHT_RESOLUTION &3, dtemp);
+      page += F("<tr><td>DHT Temperature: </td><td>"); page += dtemp; page += F("&deg;C</td></tr>");
+      dtostrf(dh, 1, 1, dtemp);
+      page += F("<tr><td>DHT Humidity: </td><td>"); page += dtemp; page += F("%</td></tr>");
+      page += F("</table><br/>");
     }
-#endif  // SEND_TELEMETRY_DHT/2
+#endif  // SEND_TELEMETRY_DHT
 
     if (_httpflag == HTTP_ADMIN) {
       page += FPSTR(HTTP_BTN_MENU1);
       page += FPSTR(HTTP_BTN_RSTRT);
     }
     showPage(page);
-
+    
 #ifdef SEND_TELEMETRY_DS18x20
     ds18x20_search();      // Check for changes in sensors number
     ds18x20_convert();     // Start Conversion, takes up to one second
@@ -441,8 +419,6 @@ void handleRoot()
 
 void handleConfig()
 {
-  if ( !checkAuthentication() ) return;
-
   addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Handle config"));
 
   String page = FPSTR(HTTP_HEAD);
@@ -464,8 +440,6 @@ void handleWifi0()
 
 void handleWifi(boolean scan)
 {
-  if ( !checkAuthentication() ) return;
-
   char log[LOGSZ];
 
   addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Handle Wifi config"));
@@ -544,8 +518,14 @@ void handleWifi(boolean scan)
   }
 
   page += FPSTR(HTTP_FORM_WIFI);
-
-  page.replace("{h0}", Hostname);
+  
+  char str[33];
+  if (!strcmp(WIFI_HOSTNAME, DEF_WIFI_HOSTNAME)) {
+    snprintf_P(str, sizeof(str), PSTR(DEF_WIFI_HOSTNAME), sysCfg.mqtt_topic, ESP.getChipId() & 0x1FFF);
+  } else {
+    snprintf_P(str, sizeof(str), PSTR(WIFI_HOSTNAME));
+  }
+  page.replace("{h0}", str);
   page.replace("{h1}", String(sysCfg.hostname));
   page.replace("{s1}", String(sysCfg.sta_ssid));
   page.replace("{p1}", String(sysCfg.sta_pwd));
@@ -560,16 +540,18 @@ void handleWifi(boolean scan)
 
 void handleMqtt()
 {
-  if ( !checkAuthentication() ) return;
-
   addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Handle MQTT config"));
 
   String page = FPSTR(HTTP_HEAD);
   page.replace("{v}", "Configure MQTT");
   page += FPSTR(HTTP_FORM_MQTT);
-
-  page.replace("{m0}", MQTTClient);
-  page.replace("{m7}", MQTTTopic);
+  char str[33];
+  if (!strcmp(MQTT_CLIENT_ID, DEF_MQTT_CLIENT_ID)) {
+    snprintf_P(str, sizeof(str), PSTR(DEF_MQTT_CLIENT_ID), ESP.getChipId());
+  } else {
+    snprintf_P(str, sizeof(str), PSTR(MQTT_CLIENT_ID));
+  }
+  page.replace("{m0}", str);
   page.replace("{m1}", String(sysCfg.mqtt_host));
   page.replace("{m2}", String(sysCfg.mqtt_port));
   page.replace("{m3}", String(sysCfg.mqtt_client));
@@ -581,30 +563,26 @@ void handleMqtt()
   showPage(page);
 }
 
-#ifdef USE_DOMOTICZ
-void handleDomoticz()
-{
-  if ( !checkAuthentication() ) return;
+#ifdef USE_DOMOTICZ  
+void handleDomoticz()  
+{  
+  addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Handle Domoticz config"));  
 
-  addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Handle Domoticz config"));
-
-  String page = FPSTR(HTTP_HEAD);
-  page.replace("{v}", "Configure Domoticz");
-  page += FPSTR(HTTP_FORM_DOMOTICZ);
-  page.replace("{d1}", String(sysCfg.domoticz_in_topic));
-  page.replace("{d2}", String(sysCfg.domoticz_out_topic));
-  page.replace("{d3}", String((int)sysCfg.domoticz_relay_idx[0]));
-  page.replace("{d4}", String((int)sysCfg.domoticz_update_timer));
-  page += FPSTR(HTTP_FORM_END);
-  page += FPSTR(HTTP_BTN_CONF);
-  showPage(page);
-}
-#endif  // USE_DOMOTICZ
+  String page = FPSTR(HTTP_HEAD);  
+  page.replace("{v}", "Configure Domoticz");  
+  page += FPSTR(HTTP_FORM_DOMOTICZ);  
+  page.replace("{d1}", String(sysCfg.domoticz_in_topic));  
+  page.replace("{d2}", String(sysCfg.domoticz_out_topic));  
+  page.replace("{d3}", String((int)sysCfg.domoticz_relay_idx[0]));  
+  page.replace("{d4}", String((int)sysCfg.domoticz_update_timer));  
+  page += FPSTR(HTTP_FORM_END);  
+  page += FPSTR(HTTP_BTN_CONF);  
+  showPage(page);  
+}  
+#endif  // USE_DOMOTICZ  
 
 void handleLog()
 {
-  if ( !checkAuthentication() ) return;
-
   addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Handle Log config"));
 
   String page = FPSTR(HTTP_HEAD);
@@ -614,7 +592,7 @@ void handleLog()
     page.replace("{a" + String(i), (i == sysCfg.seriallog_level) ? " selected " : " ");
     page.replace("{b" + String(i), (i == sysCfg.weblog_level) ? " selected " : " ");
     page.replace("{c" + String(i), (i == sysCfg.syslog_level) ? " selected " : " ");
-  }
+  }  
   page.replace("{l2}", String(sysCfg.syslog_host));
   page.replace("{l3}", String(sysCfg.syslog_port));
   page.replace("{l4}", String(sysCfg.tele_period));
@@ -625,8 +603,6 @@ void handleLog()
 
 void handleSave()
 {
-  if ( !checkAuthentication() ) return;
-
   char log[LOGSZ];
   byte what = 0, restart;
   String result = "";
@@ -637,7 +613,7 @@ void handleSave()
   switch (what) {
   case 1:
     strlcpy(sysCfg.hostname, (!strlen(webServer->arg("h").c_str())) ? WIFI_HOSTNAME : webServer->arg("h").c_str(), sizeof(sysCfg.hostname));
-    if (strlen(sysCfg.hostname) == 0) strlcpy(sysCfg.hostname, DEF_WIFI_HOSTNAME, sizeof(sysCfg.hostname));
+    if (strstr(sysCfg.hostname,"%")) strlcpy(sysCfg.hostname, DEF_WIFI_HOSTNAME, sizeof(sysCfg.hostname));
     strlcpy(sysCfg.sta_ssid, (!strlen(webServer->arg("s").c_str())) ? STA_SSID : webServer->arg("s").c_str(), sizeof(sysCfg.sta_ssid));
     strlcpy(sysCfg.sta_pwd, (!strlen(webServer->arg("p").c_str())) ? STA_PASS : webServer->arg("p").c_str(), sizeof(sysCfg.sta_pwd));
     snprintf_P(log, sizeof(log), PSTR("HTTP: Wifi Hostname %s, SSID %s and Password %s"), sysCfg.hostname, sysCfg.sta_ssid, sysCfg.sta_pwd);
@@ -648,7 +624,7 @@ void handleSave()
     strlcpy(sysCfg.mqtt_host, (!strlen(webServer->arg("mh").c_str())) ? MQTT_HOST : webServer->arg("mh").c_str(), sizeof(sysCfg.mqtt_host));
     sysCfg.mqtt_port = (!strlen(webServer->arg("ml").c_str())) ? MQTT_PORT : atoi(webServer->arg("ml").c_str());
     strlcpy(sysCfg.mqtt_client, (!strlen(webServer->arg("mc").c_str())) ? MQTT_CLIENT_ID : webServer->arg("mc").c_str(), sizeof(sysCfg.mqtt_client));
-    if (strlen(sysCfg.mqtt_client) == 0) strlcpy(sysCfg.mqtt_client, DEF_MQTT_CLIENT_ID, sizeof(sysCfg.mqtt_client));
+    if (strstr(sysCfg.mqtt_client,"%")) strlcpy(sysCfg.mqtt_client, DEF_MQTT_CLIENT_ID, sizeof(sysCfg.mqtt_client));
     strlcpy(sysCfg.mqtt_user, (!strlen(webServer->arg("mu").c_str())) ? MQTT_USER : webServer->arg("mu").c_str(), sizeof(sysCfg.mqtt_user));
     strlcpy(sysCfg.mqtt_pwd, (!strlen(webServer->arg("mp").c_str())) ? MQTT_PASS : webServer->arg("mp").c_str(), sizeof(sysCfg.mqtt_pwd));
     strlcpy(sysCfg.mqtt_topic, (!strlen(webServer->arg("mt").c_str())) ? MQTT_TOPIC : webServer->arg("mt").c_str(), sizeof(sysCfg.mqtt_topic));
@@ -703,8 +679,6 @@ void handleSave()
 
 void handleReset()
 {
-  if ( !checkAuthentication() ) return;
-
   char svalue[MESSZ];
 
   addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Reset parameters"));
@@ -722,8 +696,6 @@ void handleReset()
 
 void handleUpgrade()
 {
-  if ( !checkAuthentication() ) return;
-
   addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Handle upgrade"));
 
   String page = FPSTR(HTTP_HEAD);
@@ -738,8 +710,6 @@ void handleUpgrade()
 
 void handleUpgradeStart()
 {
-  if ( !checkAuthentication() ) return;
-
   char svalue[MESSZ];
 
   addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Firmware upgrade start"));
@@ -749,7 +719,7 @@ void handleUpgradeStart()
     snprintf_P(svalue, sizeof(svalue), PSTR("otaurl %s"), webServer->arg("o").c_str());
     do_cmnd(svalue);
   }
-
+  
   String page = FPSTR(HTTP_HEAD);
   page.replace("{v}", "Info");
   page += F("<div style='text-align:center;'><b>Upgrade started ...</b></div>");
@@ -763,8 +733,6 @@ void handleUpgradeStart()
 
 void handleUploadDone()
 {
-  if ( !checkAuthentication() ) return;
-
   char svalue[MESSZ];
 
   addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Firmware upload done"));
@@ -810,20 +778,17 @@ void handleUploadDone()
 
 void handleUploadLoop()
 {
-  if ( !checkAuthentication() ) return;
-
   // Based on ESP8266HTTPUpdateServer.cpp uses ESP8266WebServer Parsing.cpp and Cores Updater.cpp (Update)
   char log[LOGSZ];
   boolean _serialoutput = (LOG_LEVEL_DEBUG <= sysCfg.seriallog_level);
 
-  if (_httpflag == HTTP_USER) return;
   if (_uploaderror) {
     Update.end();
     return;
   }
-
+  
   HTTPUpload& upload = webServer->upload();
-
+  
   if (upload.status == UPLOAD_FILE_START) {
     restartflag = 60;
     mqttcounter = 60;
@@ -892,8 +857,6 @@ void handleUploadLoop()
 
 void handleConsole()
 {
-  if ( !checkAuthentication() ) return;
-
   char svalue[MESSZ];
 
   addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Handle console"));
@@ -913,19 +876,9 @@ void handleConsole()
 
 void handleAjax()
 {
-  if ( !checkAuthentication() ) return;
-
   String message = "";
-  uint16_t size = 0;
 
-  int maxSize = ESP.getFreeHeap() - 6000;
-
-  byte counter = logidx;
-  do {
-    counter--;
-    if (counter == 255) counter = MAX_LOG_LINES -1;
-    size += Log[counter].length();
-  } while ((counter != logidx) && (size < maxSize));
+  byte counter = logidx;  // Points to oldest entry
   do {
     if (Log[counter].length()) {
       if (message.length()) message += F("\n");
@@ -942,8 +895,6 @@ void handleAjax()
 
 void handleInfo()
 {
-  if ( !checkAuthentication() ) return;
-
   addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Handle info"));
 
   int freeMem = ESP.getFreeHeap();
@@ -979,7 +930,7 @@ void handleInfo()
   page += F("<tr><td><b>MQTT Client and<br/>&nbsp;Fallback Topic</b></td><td>"); page += MQTTClient; page += F("</td></tr>");
   page += F("<tr><td><b>MQTT User</b></td><td>"); page += sysCfg.mqtt_user; page += F("</td></tr>");
 //  page += F("<tr><td><b>MQTT Password</b></td><td>"); page += sysCfg.mqtt_pwd; page += F("</td></tr>");
-  page += F("<tr><td><b>MQTT Topic</b></td><td>"); page += MQTTTopic; page += F("</td></tr>");
+  page += F("<tr><td><b>MQTT Topic</b></td><td>"); page += sysCfg.mqtt_topic; page += F("</td></tr>");
   page += F("<tr><td><b>MQTT Group Topic</b></td><td>"); page += sysCfg.mqtt_grptopic; page += F("</td></tr>");
   page += F("<tr><td>&nbsp;</td></tr>");
   page += F("<tr><td><b>ESP Chip id</b></td><td>"); page += String(ESP.getChipId()); page += F("</td></tr>");
@@ -997,8 +948,6 @@ void handleInfo()
 
 void handleRestart()
 {
-  if ( !checkAuthentication() ) return;
-
   addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Restarting"));
 
   String page = FPSTR(HTTP_HEAD);
@@ -1030,7 +979,7 @@ void handleNotFound()
   for ( uint8_t i = 0; i < webServer->args(); i++ ) {
     message += " " + webServer->argName ( i ) + ": " + webServer->arg ( i ) + "\n";
   }
-
+  
   webServer->sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   webServer->sendHeader("Pragma", "no-cache");
   webServer->sendHeader("Expires", "-1");
@@ -1064,3 +1013,4 @@ boolean isIp(String str)
 }
 
 #endif  // USE_WEBSERVER
+

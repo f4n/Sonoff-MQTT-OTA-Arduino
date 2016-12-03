@@ -1349,7 +1349,7 @@ void mqttDataCb(char* topic, byte* data, unsigned int data_len)
   }
   if (type == NULL) {
     blinks = 1;
-    snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/COMMANDS"), PUB_PREFIX, sysCfg.mqtt_topic);
+    snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/COMMANDS"), PUB_PREFIX, MQTTTopic);
     snprintf_P(svalue, sizeof(svalue), PSTR("Status, SaveData, SaveSate, Upgrade, Otaurl, Restart, Reset, WifiConfig, Seriallog, Syslog, LogHost, LogPort, SSId, Password%s"), (!grpflg) ? ", Hostname" : "");
 #ifdef USE_WEBSERVER
     snprintf_P(svalue, sizeof(svalue), PSTR("%s, Weblog, Webserver"), svalue);
@@ -1435,7 +1435,7 @@ void do_cmnd_power(byte device, byte state)
 //    snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/STATUS"), PUB_PREFIX, sysCfg.mqtt_topic);
 //    snprintf_P(svalue, sizeof(svalue), PSTR("{\"%s%d\":\"%s\"}"), sysCfg.mqtt_subtopic, device, (power & mask) ? MQTT_STATUS_ON : MQTT_STATUS_OFF);
 //  } else {
-    snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%d/%s"), PUB_PREFIX, sysCfg.mqtt_topic, device, sysCfg.mqtt_subtopic);
+    snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%d/%s"), PUB_PREFIX, MQTTTopic, device, sysCfg.mqtt_subtopic);
     strlcpy(svalue, (power & mask) ? MQTT_STATUS_ON : MQTT_STATUS_OFF, sizeof(svalue));
 //  }
   mqtt_publish(stopic, svalue);
@@ -1489,7 +1489,7 @@ void hlw_margin_chk()
 //    addLog(LOG_LEVEL_DEBUG, log);
 
     if (sysCfg.message_format == JSON) {
-      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/TELEMETRY"), PUB_PREFIX2, sysCfg.mqtt_topic);
+      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/TELEMETRY"), PUB_PREFIX2, MQTTTopic);
       snprintf_P(svalue, sizeof(svalue), PSTR("{"));
       jsonflg = 0;
     }
@@ -2354,7 +2354,7 @@ void setup()
     HostnameBuf.replace("{mac}", mac);
   }
   if (strstr(sysCfg.hostname, "{topic}")) {
-    HostnameBuf.replace("{topic}", sysCfg.mqtt_topic);
+    HostnameBuf.replace("{topic}", MQTTTopic);
   }
   HostnameBuf.toCharArray(Hostname, 33);
   // ---

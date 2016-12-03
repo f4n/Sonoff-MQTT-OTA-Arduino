@@ -7,14 +7,10 @@ Provide ESP8266 based itead Sonoff with Serial, Web and MQTT control allowing 'O
 
 Current version is **2.1.1a-f4n** - See ```sonoff/_releasenotes.ino``` for change information.
 
-[<img alt="Enable external I2C Sensors" src="http://tinkerman.cat/wp-content/uploads/2016/10/20161004_110845s.jpg" height="200" align="right" />](http://tinkerman.cat/wp-content/uploads/2016/10/20161004_110845s.jpg)
+[<img alt="Enable external I2C Sensors" src="http://tinkerman.cat/wp-content/uploads/2016/10/20161004_110845s.jpg" height="100" align="right" />](http://tinkerman.cat/wp-content/uploads/2016/10/20161004_110845s.jpg)
 <sup>1</sup>) For external I2C Sensors solder GPIO4 to Ring1 shown in the following picture with a 0&Omega; resistor, marked with a big single 0 (a solder bridge works as well).
 
-(Thx to [Thinkerman](http://tinkerman.cat/sonoff-th10-th16-sensors-displays-actuators/) for the images)
-
-
-
-
+(Images by [Thinkerman](http://tinkerman.cat/sonoff-th10-th16-sensors-displays-actuators/))
 
 
 

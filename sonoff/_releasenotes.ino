@@ -54,7 +54,7 @@
  * Added webserver basic authentication
  * Added replacer {mac} for Hostname, MqttClient and MqttTopic
  * Added replacer {topic} for Hostname
- * Added auto detecton for external sensors
+ * Added auto detection for external sensors
  * Fixed some smaller problems e.g. read a proper DS18b20 value on the webpage
  *
  *

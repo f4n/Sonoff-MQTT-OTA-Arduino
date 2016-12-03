@@ -1,6 +1,4 @@
 /*
-These routines provide support to my various ESP8266 based projects.
-
 Copyright (c) 2016 Theo Arends.  All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -196,6 +194,60 @@ const char HTTP_END[] PROGMEM =
   "</div>"
   "</body>"
   "</html>";
+#ifdef USE_WEMO_EMULATION
+const char WEMO_EVENTSERVICE_XML[] PROGMEM =
+  "<?scpd xmlns=\"urn:Belkin:service-1-0\"?>"
+  "<actionList>"
+    "<action>"
+      "<name>SetBinaryState</name>"
+      "<argumentList>"
+        "<argument>"
+          "<retval/>"
+          "<name>BinaryState</name>"
+          "<relatedStateVariable>BinaryState</relatedStateVariable>"
+          "<direction>in</direction>"
+        "</argument>"
+      "</argumentList>"
+      "<serviceStateTable>"
+        "<stateVariable sendEvents=\"yes\">"
+          "<name>BinaryState</name>"
+          "<dataType>Boolean</dataType>"
+          "<defaultValue>0</defaultValue>"
+        "</stateVariable>"
+        "<stateVariable sendEvents=\"yes\">"
+          "<name>level</name>"
+          "<dataType>string</dataType>"
+          "<defaultValue>0</defaultValue>"
+        "</stateVariable>"
+      "</serviceStateTable>"
+    "</action>"
+  "</scpd>\r\n"
+  "\r\n";
+const char WEMO_SETUP_XML[] PROGMEM =
+  "<?xml version=\"1.0\"?>"
+  "<root>"
+    "<device>"
+      "<deviceType>urn:Belkin:device:controllee:1</deviceType>"
+      "<friendlyName>{x1}</friendlyName>"
+      "<manufacturer>Belkin International Inc.</manufacturer>"
+      "<modelName>Sonoff Socket</modelName>"
+      "<modelNumber>3.1415</modelNumber>"
+      "<UDN>uuid:{x2}</UDN>"
+      "<serialNumber>{x3}</serialNumber>"
+      "<binaryState>0</binaryState>"
+      "<serviceList>"
+        "<service>"
+          "<serviceType>urn:Belkin:service:basicevent:1</serviceType>"
+          "<serviceId>urn:Belkin:serviceId:basicevent1</serviceId>"
+          "<controlURL>/upnp/control/basicevent1</controlURL>"
+          "<eventSubURL>/upnp/event/basicevent1</eventSubURL>"
+          "<SCPDURL>/eventservice.xml</SCPDURL>"
+        "</service>"
+      "</serviceList>"
+    "</device>"
+  "</root>\r\n"
+  "\r\n";
+#endif  // USE_WEMO_EMULATION
 
 #define DNS_PORT 53
 enum http_t {HTTP_OFF, HTTP_USER, HTTP_ADMIN, HTTP_MANAGER};
@@ -232,6 +284,11 @@ void startWebserver(int type, IPAddress ipweb)
       webServer->on("/in", handleInfo);
       webServer->on("/rb", handleRestart);
       webServer->on("/fwlink", handleRoot);  // Microsoft captive portal. Maybe not needed. Might be handled by notFound handler.
+#ifdef USE_WEMO_EMULATION
+      webServer->on("/upnp/control/basicevent1", HTTP_POST, handleUPnPevent);
+      webServer->on("/eventservice.xml", handleUPnPservice);
+      webServer->on("/setup.xml", handleUPnPsetup);
+#endif  // USE_WEMO_EMULATION
       webServer->onNotFound(handleNotFound);
     }
     webServer->begin(); // Web server start
@@ -382,7 +439,7 @@ void handleRoot()
       float st;
       if (dsb_readTemp(st)) {        // Check if read failed
         page += F("<table style='width:100%'>");
-        dtostrf(st, 1, DSB_RESOLUTION &3, stemp);
+        dtostrf(st, 1, TEMP_RESOLUTION &3, stemp);
         page += F("<tr><td>DSB Temperature: </td><td>"); page += stemp; page += F("&deg;C</td></tr>");
         page += F("</table><br/>");
 
@@ -417,14 +474,44 @@ void handleRoot()
       float dt, dh;
       if (dht_readTempHum(false, dt, dh)) {     // Read temperature as Celsius (the default)
         page += F("<table style='width:100%'>");
-        dtostrf(dt, 1, DHT_RESOLUTION &3, dtemp);
+        dtostrf(dt, 1, TEMP_RESOLUTION &3, dtemp);
         page += F("<tr><td>DHT Temperature: </td><td>"); page += dtemp; page += F("&deg;C</td></tr>");
-        dtostrf(dh, 1, 1, dtemp);
+        dtostrf(dh, 1, HUMIDITY_RESOLUTION &3, dtemp);
         page += F("<tr><td>DHT Humidity: </td><td>"); page += dtemp; page += F("%</td></tr>");
         page += F("</table><br/>");
       }
     }
 #endif  // SEND_TELEMETRY_DHT/2
+
+#if defined(SEND_TELEMETRY_I2C)
+    char itemp[10];
+    if(htu_found()) {
+      float t_htu21 = htu21_readTemperature();
+      float h_htu21 = htu21_readHumidity();
+      h_htu21 = htu21_compensatedHumidity(h_htu21, t_htu21);
+      page += F("<table style='width:100%'>");
+      dtostrf(t_htu21, 1, TEMP_RESOLUTION &3, itemp);
+      page += F("<tr><td>HTU Temperature: </td><td>"); page += itemp; page += F("&deg;C</td></tr>");
+      dtostrf(h_htu21, 1, HUMIDITY_RESOLUTION &3, itemp);
+      page += F("<tr><td>HTU Humidity: </td><td>"); page += itemp; page += F("%</td></tr>");
+      page += F("</table><br/>");
+    }
+    if(bmp_found()) {
+      double t_bmp = bmp_readTemperature();
+      double p_bmp = bmp_readPressure();
+      double h_bmp = bmp_readHumidity();
+      page += F("<table style='width:100%'>");
+      dtostrf(t_bmp, 1, TEMP_RESOLUTION &3, itemp);
+      page += F("<tr><td>BMP Temperature: </td><td>"); page += itemp; page += F("&deg;C</td></tr>");
+      if (!strcmp(bmp_type(),"BME280")) {
+        dtostrf(h_bmp, 1, HUMIDITY_RESOLUTION &3, itemp);
+        page += F("<tr><td>BMP Humidity: </td><td>"); page += itemp; page += F("%</td></tr>");
+      }
+      dtostrf(p_bmp, 1, PRESSURE_RESOLUTION &3, itemp);
+      page += F("<tr><td>BMP Pressure: </td><td>"); page += itemp; page += F(" mbar</td></tr>");
+      page += F("</table><br/>");
+    }
+#endif  // SEND_TELEMETRY_I2C
 
     if (_httpflag == HTTP_ADMIN) {
       page += FPSTR(HTTP_BTN_MENU1);
@@ -474,6 +561,7 @@ void handleWifi(boolean scan)
   page.replace("{v}", "Configure Wifi");
 
   if (scan) {
+    if (udpConnected) WiFiUDP::stopAll();  // Needed when WeMo is enabled
     int n = WiFi.scanNetworks();
     addLog_P(LOG_LEVEL_DEBUG, PSTR("Wifi: Scan done"));
 
@@ -539,6 +627,7 @@ void handleWifi(boolean scan)
       }
       page += "<br/>";
     }
+    udpConnected = false;
   } else {
     page += FPSTR(HTTP_LNK_SCAN);
   }
@@ -660,6 +749,8 @@ void handleSave()
     sysCfg.seriallog_level = (!strlen(webServer->arg("ls").c_str())) ? SERIAL_LOG_LEVEL : atoi(webServer->arg("ls").c_str());
     sysCfg.weblog_level = (!strlen(webServer->arg("lw").c_str())) ? WEB_LOG_LEVEL : atoi(webServer->arg("lw").c_str());
     sysCfg.syslog_level = (!strlen(webServer->arg("ll").c_str())) ? SYS_LOG_LEVEL : atoi(webServer->arg("ll").c_str());
+    syslog_level = sysCfg.syslog_level;
+    syslog_timer = 0;
     strlcpy(sysCfg.syslog_host, (!strlen(webServer->arg("lh").c_str())) ? SYS_LOG_HOST : webServer->arg("lh").c_str(), sizeof(sysCfg.syslog_host));
     sysCfg.syslog_port = (!strlen(webServer->arg("lp").c_str())) ? SYS_LOG_PORT : atoi(webServer->arg("lp").c_str());
     sysCfg.tele_period = (!strlen(webServer->arg("lt").c_str())) ? TELE_PERIOD : atoi(webServer->arg("lt").c_str());
@@ -832,7 +923,7 @@ void handleUploadLoop()
       _uploaderror = 1;
       return;
     }
-//    WiFiUDP::stopAll();
+    WiFiUDP::stopAll();  // Needed when WeMo is enabled
     mqttClient.disconnect();
 
     snprintf_P(log, sizeof(log), PSTR("Upload: File %s ..."), upload.filename.c_str());
@@ -1013,6 +1104,37 @@ void handleRestart()
 
   restartflag = 2;
 }
+
+#ifdef USE_WEMO_EMULATION
+void handleUPnPevent()
+{
+  addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Handle WeMo basic event"));
+
+  String request = webServer->arg(0);
+  if(request.indexOf("State>1</Binary") > 0) do_cmnd_power(1, 1);
+  if(request.indexOf("State>0</Binary") > 0) do_cmnd_power(1, 0);
+  webServer->send(200, "text/plain", "");
+}
+
+void handleUPnPservice()
+{
+  addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Handle WeMo event service"));
+
+  String eventservice_xml = FPSTR(WEMO_EVENTSERVICE_XML);
+  webServer->send(200, "text/plain", eventservice_xml);
+}
+
+void handleUPnPsetup()
+{
+  addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Handle WeMo setup"));
+
+  String setup_xml = FPSTR(WEMO_SETUP_XML);
+  setup_xml.replace("{x1}", String(MQTTClient));
+  setup_xml.replace("{x2}", wemo_UUID());
+  setup_xml.replace("{x3}", wemo_serial());
+  webServer->send(200, "text/xml", setup_xml);
+}
+#endif  // USE_WEMO_EMULATION
 
 void handleNotFound()
 {

@@ -1,7 +1,45 @@
-/* 2.0.17-f4n
+/* 2.1.1a-f4n
  * Merge
  *
- * 2.0.17
+ *
+ * 2.1.1a 20161203
+ * Fix scan for wifi networks if WeMo is enabled
+ * Fix syslog setting using web page
+ *
+ * 2.1.1 20161202
+ * Add support for ElectroDragon second relay and button (only toggle with optional ButtonTopic)
+ *
+ * 2.1.0 20161202
+ * Add optional EXPERIMENTAL TLS to MQTT
+ * Fix MQTT payload handling
+ * Optimzed WeMo code
+ *
+ * 2.0.21a 20161201
+ * Fix WeMo PowerPlug emulation
+ *
+ * 2.0.21 20161130
+ * Add Belkin WeMo PowerPlug emulation enabled with USE_WEMO_EMULATION in user_config.h (Heiko Krupp)
+ *
+ * 2.0.20 20161130
+ * Relax MQTTClient naming but only allows hexadecimal uppercase numbers
+ * Add I2C support with command I2CScan
+ * Add I2C sensor driver for HTU21 as alternate sensor using TH10/16 connectors (Heiko Krupp)
+ * Add I2C sensor driver for BMP085/BMP180/BMP280/BME280 as alternate sensor using TH10/16 connectors
+ *
+ * 2.0.19a 20161127
+ * Add support for ButtonTopic and ButtonRetain to wall switch function
+ * Add pullup to SWITCH_PIN and command SwitchMode to syntax
+ *
+ * 2.0.18 20161126
+ * Add SUB_PREFIX multi level support allowing 'cmnd' or 'cmnd/level2/level3'
+ * Add wall switch function to GPIO14 and command SwitchMode (Alex Scott)
+ *
+ *
+ * 2.0.17-f4n
+ * Merge
+ *
+ *
+ * 2.0.17 20161123
  * Calibrate HLWPCAL from 12345 to 12530
  * Add alternative sensor driver DHT2 using Adafruit DHT library
  * Add define MESSAGE_FORMAT to user_config.h

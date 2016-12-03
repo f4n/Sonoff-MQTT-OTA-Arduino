@@ -5,7 +5,7 @@ Provide ESP8266 based itead Sonoff with Serial, Web and MQTT control allowing 'O
 - Basic webserver authentication, (protect against configuration changes)
 - Mac-Address replacer for MQTT topic (to have a unique topic for each device)
 
-Current version is **2.0.17-f4n** - See ```sonoff/_releasenotes.ino``` for change information.
+Current version is ***2.1.1a-f4n** - See ```sonoff/_releasenotes.ino``` for change information.
 
 # Original Description:
 
@@ -16,7 +16,7 @@ Starting with version 2.0.0 the following hardware devices are supported:
 - itead Sonoff TH10 / TH16 with temperature sensor
 - itead Sonoff Pow
 - itead S20 Smart Socket
-- ElectroDragon IoT Relay Board but relay 1 only
+- ElectroDragon IoT Relay Board
 
 See [arendst Wiki](https://github.com/arendst/Sonoff-MQTT-OTA-Arduino/wiki) for more information.
 

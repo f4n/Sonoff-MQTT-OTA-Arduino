@@ -496,7 +496,7 @@ void handleRoot()
       page += F("<tr><td>HTU Humidity: </td><td>"); page += itemp; page += F("%</td></tr>");
       page += F("</table><br/>");
     }
-    if(bmp_found()) {
+    else if(bmp_found()) {
       double t_bmp = bmp_readTemperature();
       double p_bmp = bmp_readPressure();
       double h_bmp = bmp_readHumidity();
@@ -509,6 +509,13 @@ void handleRoot()
       }
       dtostrf(p_bmp, 1, PRESSURE_RESOLUTION &3, itemp);
       page += F("<tr><td>BMP Pressure: </td><td>"); page += itemp; page += F(" mbar</td></tr>");
+      page += F("</table><br/>");
+    }
+    else if(bh1750_found()) {
+      float l_bh1750 = bh1750_read();
+      page += F("<table style='width:100%'>");
+      dtostrf(l_bh1750, 1, LUX_RESOLUTION &3, itemp);
+      page += F("<tr><td>BH1750 Light: </td><td>"); page += itemp; page += F("lux</td></tr>");
       page += F("</table><br/>");
     }
 #endif  // SEND_TELEMETRY_I2C

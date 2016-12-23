@@ -1,4 +1,7 @@
-/* 2.1.1a-f4n
+/* 2.1.1b-f4n
+ * Added BH1750 digital light sensor support
+ *
+ * 2.1.1a-f4n
  * Autodetection for external I2C devices (like BME/BMP sensors)
  * Merge 2.1.1a
  *

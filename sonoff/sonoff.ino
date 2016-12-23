@@ -10,7 +10,7 @@
  * ====================================================
 */
 
-#define VERSION                0x02010101   // 2.1.1a
+#define VERSION                0x02010102   // 2.1.1b
 
 #define SONOFF                 1            // Sonoff, Sonoff SV, Sonoff Dual, Sonoff TH 10A/16A, S20 Smart Socket, 4 Channel
 #define SONOFF_POW             9            // Sonoff Pow
@@ -1675,6 +1675,13 @@ void detect_sensor() {
     addLog(LOG_LEVEL_DEBUG, log);
     return;
   }
+  if (bh1750_detect()) {
+    detected_sensor = SEND_TELEMETRY_I2C;
+    snprintf_P(log, sizeof(log), PSTR("APP: ... BH1750 detected"));
+    addLog(LOG_LEVEL_DEBUG, log);
+    return;
+  }
+
   addLog_P(LOG_LEVEL_DEBUG, PSTR("APP: ... false"));
 #endif // SEND_TELEMETRY_I2C
 
@@ -1779,8 +1786,12 @@ void every_second()
           //snprintf_P(log, sizeof(log), PSTR("I2C: %s found at address 0x%x"), htu_type(), htu_address());
           //addLog(LOG_LEVEL_DEBUG, log);
         }
-        if (bmp_detect()) {
+        else if (bmp_detect()) {
           //snprintf_P(log, sizeof(log), PSTR("I2C: %s found at address 0x%x"), bmp_type(), bmp_address());
+          //addLog(LOG_LEVEL_DEBUG, log);
+        }
+        else if (bh1750_detect()) {
+          //snprintf_P(log, sizeof(log), PSTR("I2C: BH1750 found"));
           //addLog(LOG_LEVEL_DEBUG, log);
         }
 #endif // SEND_TELEMETRY_I2C
@@ -1924,7 +1935,7 @@ void every_second()
             mqtt_publish(stopic, svalue);
           }
         }
-        if(bmp_found())
+        else if(bmp_found())
         {
           double t_bmp = bmp_readTemperature();
           double p_bmp = bmp_readPressure();
@@ -1954,6 +1965,20 @@ void every_second()
             mqtt_publish(stopic, svalue);
           }
         }
+        else if(bh1750_found())
+        {
+          float l_bh1750 = bh1750_read();
+          dtostrf(l_bh1750, 1, LUX_RESOLUTION &3, stemp1);
+          if (sysCfg.message_format == JSON) {
+            snprintf_P(svalue, sizeof(svalue), PSTR("%s, \"BH1750\":{\"Light\":\"%s\"}"),
+              svalue, stemp1);
+          } else {
+            snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/%s/LIGHT"), PUB_PREFIX2, MQTTTopic, "BH1750");
+            snprintf_P(svalue, sizeof(svalue), PSTR("%s%s"), stemp1, (sysCfg.mqtt_units) ? " lux" : "");
+            mqtt_publish(stopic, svalue);
+          }
+        }
+
 #endif // SEND_TELEMETRY_I2C
 
       }
@@ -2277,7 +2302,7 @@ void setup()
   Serial.begin(Baudrate);
   delay(10);
   Serial.println();
-#endif  
+#endif
   sysCfg.seriallog_level = LOG_LEVEL_INFO;  // Allow specific serial messages until config loaded
 
   snprintf_P(Version, sizeof(Version), PSTR("%d.%d.%d"), VERSION >> 24 & 0xff, VERSION >> 16 & 0xff, VERSION >> 8 & 0xff);

@@ -108,6 +108,7 @@
 #define TEMP_RESOLUTION        1            // Maximum number of decimals (0 - 3) showing sensor Temperature
 #define HUMIDITY_RESOLUTION    1            // Maximum number of decimals (0 - 3) showing sensor Humidity
 #define PRESSURE_RESOLUTION    1            // Maximum number of decimals (0 - 3) showing sensor Pressure
+#define LUX_RESOLUTION         1            // Maximum number of decimals (0 - 3) showing sensor Lux
 
 /*********************************************************************************************\
  * Sonoff specific paremeters
@@ -215,12 +216,20 @@
   #define I2C_SCL_PIN          14           // GPIO 14 = I2C SCL (Sonoff_TH10A(16A))
 //  #define SEND_TELEMETRY_I2C                // Enable sending I2C sensor telemetry
 
+//  #USE_SERIAL_PORT_FOR_SENSORS            // On smart socket devices you can use the serial port pins for
+                                            // external sensors
+
 /*********************************************************************************************\
  * No user configurable items below
 \*********************************************************************************************/
 
 #else
   #error "Select either module SONOFF, SONOFF_POW or ELECTRO_DRAGON"
+#endif
+
+#if defined(USE_SERIAL_PORT_FOR_SENSORS)
+  #define I2C_SDA_PIN          3            // e.g. for Sonoff Smart Socket
+  #define I2C_SCL_PIN          1            // e.g. for Sonoff Smart Socket
 #endif
 
 #if defined(SEND_TELEMETRY_DS18B20) && defined(SEND_TELEMETRY_DS18x20)

@@ -37,6 +37,8 @@
   #define OTA_URL              "http://domus1:80/api/arduino/" PROJECT ".cpp.bin"  // [OtaUrl]
 #endif
 
+//#define SERIAL_CONSOLE                        // Uncomment to enable serial console
+
 // -- MQTT -----------------------------------
 // !!! TLS uses a LOT OF MEMORY (20k) so be careful to enable other options at the same time !!!
 //#define USE_MQTT_TLS                        // EXPERIMENTAL Use TLS for MQTT connection (+53k code, +20k mem)

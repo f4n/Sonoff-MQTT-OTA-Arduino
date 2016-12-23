@@ -516,12 +516,14 @@ void getClient(char* output, char* input, byte size)
 void setRelay(uint8_t power)
 {
   if ((sysCfg.model >= SONOFF_DUAL) && (sysCfg.model <= CHANNEL_4)) {
+#ifdef SERIAL_CONSOLE
     Serial.write(0xA0);
     Serial.write(0x04);
     Serial.write(power);
     Serial.write(0xA1);
     Serial.write('\n');
     Serial.flush();
+#endif
   } else {
     digitalWrite(REL_PIN, power & 0x1);
 #ifdef REL2_PIN
@@ -2213,6 +2215,7 @@ void stateloop()
   }
 }
 
+#ifdef SERIAL_CONSOLE
 void serial()
 {
   char log[LOGSZ];
@@ -2261,6 +2264,7 @@ void serial()
     }
   }
 }
+#endif
 
 /********************************************************************************************/
 
@@ -2269,9 +2273,11 @@ void setup()
   char log[LOGSZ];
   byte idx;
 
+#ifdef SERIAL_CONSOLE
   Serial.begin(Baudrate);
   delay(10);
   Serial.println();
+#endif  
   sysCfg.seriallog_level = LOG_LEVEL_INFO;  // Allow specific serial messages until config loaded
 
   snprintf_P(Version, sizeof(Version), PSTR("%d.%d.%d"), VERSION >> 24 & 0xff, VERSION >> 16 & 0xff, VERSION >> 8 & 0xff);
@@ -2304,6 +2310,7 @@ void setup()
     Maxdevice = sysCfg.model;
   }
   if (MODULE == ELECTRO_DRAGON) Maxdevice = 2;
+#ifdef SERIAL_CONSOLE
   if (Serial.baudRate() != Baudrate) {
     snprintf_P(log, sizeof(log), PSTR("APP: Need to change baudrate to %d"), Baudrate);
     addLog(LOG_LEVEL_INFO, log);
@@ -2313,6 +2320,7 @@ void setup()
     delay(10);
     Serial.println();
   }
+#endif
 
   sysCfg.bootcount++;
   snprintf_P(log, sizeof(log), PSTR("APP: Bootcount %d"), sysCfg.bootcount);
@@ -2413,7 +2421,9 @@ void loop()
 
   mqttClient.loop();
 
+#ifdef SERIAL_CONSOLE
   if (Serial.available()) serial();
+#endif
 
   yield();
 }

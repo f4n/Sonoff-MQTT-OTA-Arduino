@@ -5,3 +5,5 @@ sonoff/user_config.save.h
 .gitattributes
 git_pull.sh
 git_push.sh
+.clang_complete
+.gcc-flags.json

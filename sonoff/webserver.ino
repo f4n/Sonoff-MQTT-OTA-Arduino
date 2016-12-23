@@ -905,7 +905,10 @@ void handleUploadLoop()
 
   // Based on ESP8266HTTPUpdateServer.cpp uses ESP8266WebServer Parsing.cpp and Cores Updater.cpp (Update)
   char log[LOGSZ];
-  boolean _serialoutput = (LOG_LEVEL_DEBUG <= sysCfg.seriallog_level);
+  boolean _serialoutput = false;
+#ifdef _serialoutput
+  _serialoutput = (LOG_LEVEL_DEBUG <= sysCfg.seriallog_level);
+#endif
 
   if (_httpflag == HTTP_USER) return;
   if (_uploaderror) {

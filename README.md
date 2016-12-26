@@ -11,6 +11,8 @@ Current version is **2.1.1b-f4n** - See [```sonoff/_releasenotes.ino```](https:/
 
 <sup>1)</sup> For external I2C sensors see the extended [wiki](https://github.com/f4n/Sonoff-MQTT-OTA-Arduino/wiki).
 
+Also supported and tested:
+- itead Sonoff touch (you have to switch to ESP8285 module)
 
 
 # Original Description:

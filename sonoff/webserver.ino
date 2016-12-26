@@ -49,8 +49,8 @@ const char HTTP_HEAD[] PROGMEM =
     "}"
   "}"
   "function c(l){"
-    "document.getElementById('s').value=l.innerText||l.textContent;"
-    "document.getElementById('p').focus();"
+    "document.getElementById('s1').value=l.innerText||l.textContent;"
+    "document.getElementById('p1').focus();"
   "}"
   "var sn=0;"
   "function l(){"
@@ -116,8 +116,10 @@ const char HTTP_LNK_SCAN[] PROGMEM =
 const char HTTP_FORM_WIFI[] PROGMEM =
   "<fieldset><legend><b>&nbsp;Wifi parameters&nbsp;</b></legend><form method='post' action='sv'>"
   "<input id='w' name='w' value='1' hidden><input id='r' name='r' value='1' hidden>"
-  "<br/><b>SSId</b> (" STA_SSID ")<br/><input id='s' name='s' length=32 placeholder='" STA_SSID "' value='{s1}'><br/>"
-  "<br/><b>Password</b></br><input id='p' name='p' length=64 type='password' placeholder='" STA_PASS "' value='{p1}'><br/>"
+  "<br/><b>AP1 SSId</b> (" STA_SSID1 ")<br/><input id='s1' name='s1' length=32 placeholder='" STA_SSID1 "' value='{s1}'><br/>"
+  "<br/><b>AP1 Password</b></br><input id='p1' name='p1' length=64 type='password' placeholder='" STA_PASS1 "' value='{p1}'><br/>"
+  "<br/><b>AP2 SSId</b> (" STA_SSID2 ")<br/><input id='s2' name='s2' length=32 placeholder='" STA_SSID2 "' value='{s2}'><br/>"
+  "<br/><b>AP2 Password</b></br><input id='p2' name='p2' length=64 type='password' placeholder='" STA_PASS2 "' value='{p2}'><br/>"
   "<br/><b>Hostname</b> ({h0})<br/><input id='h' name='h' length=32 placeholder='" WIFI_HOSTNAME" ' value='{h1}'><br/>";
 const char HTTP_FORM_MQTT[] PROGMEM =
   "<fieldset><legend><b>&nbsp;MQTT parameters&nbsp;</b></legend><form method='post' action='sv'>"
@@ -135,8 +137,9 @@ const char HTTP_FORM_DOMOTICZ[] PROGMEM =
   "<input id='w' name='w' value='4' hidden><input id='r' name='r' value='1' hidden>"
   "<br/><b>In topic</b> (" DOMOTICZ_IN_TOPIC ")<br/><input id='it' name='it' length=32 placeholder='" DOMOTICZ_IN_TOPIC "' value='{d1}'><br/>"
   "<br/><b>Out topic</b> (" DOMOTICZ_OUT_TOPIC ")<br/><input id='ot' name='ot' length=32 placeholder='" DOMOTICZ_OUT_TOPIC "' value='{d2}'><br/>"
-  "<br/><b>Idx</b> (" STR(DOMOTICZ_RELAY_IDX1) ")<br/><input id='ix' name='ix' length=32 placeholder='" STR(DOMOTICZ_RELAY_IDX1) "' value='{d3}'><br/>"
-  "<br/><b>Update timer</b> (" STR(DOMOTICZ_UPDATE_TIMER) ")<br/><input id='ut' name='ut' length=32 placeholder='" STR(DOMOTICZ_UPDATE_TIMER) "' value='{d4}'><br/>";
+  "<br/><b>Idx 1</b> (" STR(DOMOTICZ_RELAY_IDX1) ")<br/><input id='ix' name='ix' length=8 placeholder='" STR(DOMOTICZ_RELAY_IDX1) "' value='{d3}'><br/>";
+const char HTTP_FORM_DOMOTICZ2[] PROGMEM =
+  "<br/><b>Update timer</b> (" STR(DOMOTICZ_UPDATE_TIMER) ")<br/><input id='ut' name='ut' length=32 placeholder='" STR(DOMOTICZ_UPDATE_TIMER) "' value='{d7}'><br/>";
 #endif  // USE_DOMOTICZ
 const char HTTP_FORM_LOG[] PROGMEM =
   "<fieldset><legend><b>&nbsp;Logging parameters&nbsp;</b></legend><form method='post' action='sv'>"
@@ -322,7 +325,7 @@ bool checkAuthentication() {
 void beginWifiManager()
 {
   // setup AP
-  if ((WiFi.waitForConnectResult() == WL_CONNECTED) && (static_cast<uint32_t>(WiFi.localIP()) != 0)) {
+  if ((WiFi.status() == WL_CONNECTED) && (static_cast<uint32_t>(WiFi.localIP()) != 0)) {
     WiFi.mode(WIFI_AP_STA);
     addLog_P(LOG_LEVEL_DEBUG, PSTR("Wifimanager: Set AccessPoint and keep Station"));
   } else {
@@ -369,8 +372,6 @@ void handleRoot()
 {
   if ( !checkAuthentication() ) return;
 
-  char svalue[MESSZ];
-
   addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Handle root"));
 
   if (captivePortal()) { // If captive portal redirect instead of displaying the page.
@@ -399,7 +400,7 @@ void handleRoot()
         page += F("%'><form action='/?o=");
         page += String(idx);
         page += F("' method='post'><div style='text-align:center;font-weight:bold;font-size:");
-        page += String(70 - (Maxdevice * 10));
+        page += String(70 - (Maxdevice * 8));
         page += F("px'>");
         page += (power & (0x01 << (idx -1))) ? "ON" : "OFF";
         page += F("</div><br/><button>Toggle");
@@ -435,12 +436,13 @@ void handleRoot()
 #ifdef SEND_TELEMETRY_DS18B20
     if ( detected_sensor == SEND_TELEMETRY_DS18B20 ) {
       // Needs TelePeriod to refresh data (Do not do it here as it takes too much time)
-      char stemp[10];
+      char stemp[10], sconv[10];
       float st;
-      if (dsb_readTemp(st)) {        // Check if read failed
+      if (dsb_readTemp(TEMP_CONVERSION, st)) {        // Check if read failed
+        snprintf_P(sconv, sizeof(sconv), PSTR("&deg;%c"), (TEMP_CONVERSION) ? 'F' : 'C');
         page += F("<table style='width:100%'>");
         dtostrf(st, 1, TEMP_RESOLUTION &3, stemp);
-        page += F("<tr><td>DSB Temperature: </td><td>"); page += stemp; page += F("&deg;C</td></tr>");
+        page += F("<tr><td>DSB Temperature: </td><td>"); page += stemp; page += sconv; page += F("</td></tr>");
         page += F("</table><br/>");
 
         // prepare next read
@@ -451,17 +453,18 @@ void handleRoot()
 
 #ifdef SEND_TELEMETRY_DS18x20
     if ( detected_sensor == SEND_TELEMETRY_DS18x20 ) {
-      char xtemp[10];
+      char xtemp[10], xconv[10];
       float xt;
       uint8_t xfl = 0, i;
+      snprintf_P(xconv, sizeof(xconv), PSTR("&deg;%c"), (TEMP_CONVERSION) ? 'F' : 'C');
       for (i = 0; i < ds18x20_sensors(); i++) {
-        if (ds18x20_read(i, xt)) {   // Check if read failed
+        if (ds18x20_read(i, TEMP_CONVERSION, xt)) {   // Check if read failed
           if (!xfl) {
             page += F("<table style='width:100%'>");
             xfl = 1;
           }
-          dtostrf(xt, 1, DSB_RESOLUTION &3, xtemp);
-          page += F("<tr><td>DS"); page += String(i +1); page += F(" Temperature: </td><td>"); page += xtemp; page += F("&deg;C</td></tr>");
+          dtostrf(xt, 1, TEMP_RESOLUTION &3, xtemp);
+          page += F("<tr><td>DS"); page += String(i +1); page += F(" Temperature: </td><td>"); page += xtemp; page += xconv; page += F("</td></tr>");
         }
       }
       if (xfl) page += F("</table><br/>");
@@ -470,12 +473,13 @@ void handleRoot()
 
 #if defined(SEND_TELEMETRY_DHT) || defined(SEND_TELEMETRY_DHT2)
     if ( detected_sensor == SEND_TELEMETRY_DHT ) {
-      char dtemp[10];
+      char dtemp[10], dconv[10];
       float dt, dh;
-      if (dht_readTempHum(false, dt, dh)) {     // Read temperature as Celsius (the default)
+      if (dht_readTempHum(TEMP_CONVERSION, dt, dh)) {     // Read temperature as Celsius (the default)
+        snprintf_P(dconv, sizeof(dconv), PSTR("&deg;%c"), (TEMP_CONVERSION) ? 'F' : 'C');
         page += F("<table style='width:100%'>");
         dtostrf(dt, 1, TEMP_RESOLUTION &3, dtemp);
-        page += F("<tr><td>DHT Temperature: </td><td>"); page += dtemp; page += F("&deg;C</td></tr>");
+        page += F("<tr><td>DHT Temperature: </td><td>"); page += dtemp; page += dconv; page += F("</td></tr>");
         dtostrf(dh, 1, HUMIDITY_RESOLUTION &3, dtemp);
         page += F("<tr><td>DHT Humidity: </td><td>"); page += dtemp; page += F("%</td></tr>");
         page += F("</table><br/>");
@@ -484,34 +488,36 @@ void handleRoot()
 #endif  // SEND_TELEMETRY_DHT/2
 
 #if defined(SEND_TELEMETRY_I2C)
-    char itemp[10];
+    // TODO if ( detected_sensor == XXX ) {}
+    char itemp[10], iconv[10];
+    snprintf_P(iconv, sizeof(iconv), PSTR("&deg;%c"), (TEMP_CONVERSION) ? 'F' : 'C');
     if(htu_found()) {
-      float t_htu21 = htu21_readTemperature();
+      float t_htu21 = htu21_readTemperature(TEMP_CONVERSION);
       float h_htu21 = htu21_readHumidity();
       h_htu21 = htu21_compensatedHumidity(h_htu21, t_htu21);
       page += F("<table style='width:100%'>");
       dtostrf(t_htu21, 1, TEMP_RESOLUTION &3, itemp);
-      page += F("<tr><td>HTU Temperature: </td><td>"); page += itemp; page += F("&deg;C</td></tr>");
+      page += F("<tr><td>HTU Temperature: </td><td>"); page += itemp; page += iconv; page += F("</td></tr>");
       dtostrf(h_htu21, 1, HUMIDITY_RESOLUTION &3, itemp);
       page += F("<tr><td>HTU Humidity: </td><td>"); page += itemp; page += F("%</td></tr>");
       page += F("</table><br/>");
     }
-    else if(bmp_found()) {
-      double t_bmp = bmp_readTemperature();
+    if(bmp_found()) {
+      double t_bmp = bmp_readTemperature(TEMP_CONVERSION);
       double p_bmp = bmp_readPressure();
       double h_bmp = bmp_readHumidity();
       page += F("<table style='width:100%'>");
       dtostrf(t_bmp, 1, TEMP_RESOLUTION &3, itemp);
-      page += F("<tr><td>BMP Temperature: </td><td>"); page += itemp; page += F("&deg;C</td></tr>");
+      page += F("<tr><td>BMP Temperature: </td><td>"); page += itemp; page += iconv; page += F("</td></tr>");
       if (!strcmp(bmp_type(),"BME280")) {
         dtostrf(h_bmp, 1, HUMIDITY_RESOLUTION &3, itemp);
         page += F("<tr><td>BMP Humidity: </td><td>"); page += itemp; page += F("%</td></tr>");
       }
       dtostrf(p_bmp, 1, PRESSURE_RESOLUTION &3, itemp);
-      page += F("<tr><td>BMP Pressure: </td><td>"); page += itemp; page += F(" mbar</td></tr>");
+      page += F("<tr><td>BMP Pressure: </td><td>"); page += itemp; page += F(" hPa</td></tr>");
       page += F("</table><br/>");
     }
-    else if(bh1750_found()) {
+    if(bh1750_found()) {
       float l_bh1750 = bh1750_read();
       page += F("<table style='width:100%'>");
       dtostrf(l_bh1750, 1, LUX_RESOLUTION &3, itemp);
@@ -643,8 +649,10 @@ void handleWifi(boolean scan)
 
   page.replace("{h0}", Hostname);
   page.replace("{h1}", String(sysCfg.hostname));
-  page.replace("{s1}", String(sysCfg.sta_ssid));
-  page.replace("{p1}", String(sysCfg.sta_pwd));
+  page.replace("{s1}", String(sysCfg.sta_ssid[0]));
+  page.replace("{p1}", String(sysCfg.sta_pwd[0]));
+  page.replace("{s2}", String(sysCfg.sta_ssid[1]));
+  page.replace("{p2}", String(sysCfg.sta_pwd[1]));
   page += FPSTR(HTTP_FORM_END);
   if (_httpflag == HTTP_MANAGER) {
     page += FPSTR(HTTP_BTN_RSTRT);
@@ -682,6 +690,10 @@ void handleDomoticz()
 {
   if ( !checkAuthentication() ) return;
 
+  if (_httpflag == HTTP_USER) {
+    handleRoot();
+    return;
+  }
   addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Handle Domoticz config"));
 
   String page = FPSTR(HTTP_HEAD);
@@ -690,7 +702,20 @@ void handleDomoticz()
   page.replace("{d1}", String(sysCfg.domoticz_in_topic));
   page.replace("{d2}", String(sysCfg.domoticz_out_topic));
   page.replace("{d3}", String((int)sysCfg.domoticz_relay_idx[0]));
-  page.replace("{d4}", String((int)sysCfg.domoticz_update_timer));
+  if (Maxdevice > 1) {
+    page += F("<br/><b>Idx 2</b> (" STR(DOMOTICZ_RELAY_IDX2) ")<br/><input id='iy' name='iy' length=8 placeholder='" STR(DOMOTICZ_RELAY_IDX2) "' value='{d4}'><br/>");
+    page.replace("{d4}", String((int)sysCfg.domoticz_relay_idx[1]));
+  }
+  if (Maxdevice > 2) {
+    page += F("<br/><b>Idx 3</b> (" STR(DOMOTICZ_RELAY_IDX3) ")<br/><input id='iz' name='iz' length=8 placeholder='" STR(DOMOTICZ_RELAY_IDX3) "' value='{d5}'><br/>");
+    page.replace("{d5}", String((int)sysCfg.domoticz_relay_idx[2]));
+  }
+  if (Maxdevice > 3) {
+    page += F("<br/><b>Idx 4</b> (" STR(DOMOTICZ_RELAY_IDX4) ")<br/><input id='iw' name='iw' length=8 placeholder='" STR(DOMOTICZ_RELAY_IDX4) "' value='{d6}'><br/>");
+    page.replace("{d6}", String((int)sysCfg.domoticz_relay_idx[3]));
+  }
+  page += FPSTR(HTTP_FORM_DOMOTICZ2);
+  page.replace("{d7}", String((int)sysCfg.domoticz_update_timer));
   page += FPSTR(HTTP_FORM_END);
   page += FPSTR(HTTP_BTN_CONF);
   showPage(page);
@@ -734,9 +759,12 @@ void handleSave()
   case 1:
     strlcpy(sysCfg.hostname, (!strlen(webServer->arg("h").c_str())) ? WIFI_HOSTNAME : webServer->arg("h").c_str(), sizeof(sysCfg.hostname));
     if (strlen(sysCfg.hostname) == 0) strlcpy(sysCfg.hostname, DEF_WIFI_HOSTNAME, sizeof(sysCfg.hostname));
-    strlcpy(sysCfg.sta_ssid, (!strlen(webServer->arg("s").c_str())) ? STA_SSID : webServer->arg("s").c_str(), sizeof(sysCfg.sta_ssid));
-    strlcpy(sysCfg.sta_pwd, (!strlen(webServer->arg("p").c_str())) ? STA_PASS : webServer->arg("p").c_str(), sizeof(sysCfg.sta_pwd));
-    snprintf_P(log, sizeof(log), PSTR("HTTP: Wifi Hostname %s, SSID %s and Password %s"), sysCfg.hostname, sysCfg.sta_ssid, sysCfg.sta_pwd);
+    strlcpy(sysCfg.sta_ssid[0], (!strlen(webServer->arg("s1").c_str())) ? STA_SSID1 : webServer->arg("s1").c_str(), sizeof(sysCfg.sta_ssid[0]));
+    strlcpy(sysCfg.sta_pwd[0], (!strlen(webServer->arg("p1").c_str())) ? STA_PASS1 : webServer->arg("p1").c_str(), sizeof(sysCfg.sta_pwd[0]));
+    strlcpy(sysCfg.sta_ssid[1], (!strlen(webServer->arg("s2").c_str())) ? STA_SSID2 : webServer->arg("s2").c_str(), sizeof(sysCfg.sta_ssid[1]));
+    strlcpy(sysCfg.sta_pwd[1], (!strlen(webServer->arg("p2").c_str())) ? STA_PASS2 : webServer->arg("p2").c_str(), sizeof(sysCfg.sta_pwd[1]));
+    snprintf_P(log, sizeof(log), PSTR("HTTP: Wifi Hostname %s, SSID1 %s, Password1 %s, SSID2 %s, Password2 %s"),
+      sysCfg.hostname, sysCfg.sta_ssid[0], sysCfg.sta_pwd[0], sysCfg.sta_ssid[1], sysCfg.sta_pwd[1]);
     addLog(LOG_LEVEL_INFO, log);
     result += F("<br/>Trying to connect device to network<br/>If it fails reconnect to try again");
     break;
@@ -770,9 +798,13 @@ void handleSave()
     strlcpy(sysCfg.domoticz_in_topic, (!strlen(webServer->arg("it").c_str())) ? DOMOTICZ_IN_TOPIC : webServer->arg("it").c_str(), sizeof(sysCfg.domoticz_in_topic));
     strlcpy(sysCfg.domoticz_out_topic, (!strlen(webServer->arg("ot").c_str())) ? DOMOTICZ_OUT_TOPIC : webServer->arg("ot").c_str(), sizeof(sysCfg.domoticz_out_topic));
     sysCfg.domoticz_relay_idx[0] = (!strlen(webServer->arg("ix").c_str())) ? DOMOTICZ_RELAY_IDX1 : atoi(webServer->arg("ix").c_str());
+    sysCfg.domoticz_relay_idx[1] = (!strlen(webServer->arg("iy").c_str())) ? DOMOTICZ_RELAY_IDX2 : atoi(webServer->arg("iy").c_str());
+    sysCfg.domoticz_relay_idx[2] = (!strlen(webServer->arg("iz").c_str())) ? DOMOTICZ_RELAY_IDX3 : atoi(webServer->arg("iz").c_str());
+    sysCfg.domoticz_relay_idx[3] = (!strlen(webServer->arg("iw").c_str())) ? DOMOTICZ_RELAY_IDX4 : atoi(webServer->arg("iw").c_str());
     sysCfg.domoticz_update_timer = (!strlen(webServer->arg("ut").c_str())) ? DOMOTICZ_UPDATE_TIMER : atoi(webServer->arg("ut").c_str());
-    snprintf_P(log, sizeof(log), PSTR("HTTP: Domoticz in_topic %s, out_topic %s, idx %d, update_timer %d"),
-      sysCfg.domoticz_in_topic, sysCfg.domoticz_out_topic, sysCfg.domoticz_relay_idx[0], sysCfg.domoticz_update_timer);
+    snprintf_P(log, sizeof(log), PSTR("HTTP: Domoticz in_topic %s, out_topic %s, idx1 %d, idx2 %d, idx3 %d, idx4 %d, update_timer %d"),
+      sysCfg.domoticz_in_topic, sysCfg.domoticz_out_topic, sysCfg.domoticz_relay_idx[0], sysCfg.domoticz_relay_idx[1],
+      sysCfg.domoticz_relay_idx[2], sysCfg.domoticz_relay_idx[3], sysCfg.domoticz_update_timer);
     addLog(LOG_LEVEL_INFO, log);
     break;
 #endif  // USE_DOMOTICZ
@@ -863,7 +895,10 @@ void handleUploadDone()
 {
   if ( !checkAuthentication() ) return;
 
-  char svalue[MESSZ];
+  if (_httpflag == HTTP_USER) {
+    handleRoot();
+    return;
+  }
 
   addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Firmware upload done"));
   WIFI_configCounter();
@@ -1062,7 +1097,8 @@ void handleInfo()
   page += F("<tr><td><b>Boot count</b></td><td>"); page += String(sysCfg.bootcount); page += F("</td></tr>");
   page += F("<tr><td><b>Reset reason</b></td><td>"); page += ESP.getResetReason(); page += F("</td></tr>");
   page += F("<tr><td>&nbsp;</td></tr>");
-  page += F("<tr><td><b>SSId (RSSI)</b></td><td>"); page += sysCfg.sta_ssid; page += F(" ("); page += WIFI_getRSSIasQuality(WiFi.RSSI()); page += F("%)</td></tr>");
+//  page += F("<tr><td><b>SSId (RSSI)</b></td><td>"); page += (sysCfg.sta_active)? sysCfg.sta_ssid2 : sysCfg.sta_ssid1; page += F(" ("); page += WIFI_getRSSIasQuality(WiFi.RSSI()); page += F("%)</td></tr>");
+  page += F("<tr><td><b>AP"); page += String(sysCfg.sta_active +1); page += F(" SSId (RSSI)</b></td><td>"); page += sysCfg.sta_ssid[sysCfg.sta_active]; page += F(" ("); page += WIFI_getRSSIasQuality(WiFi.RSSI()); page += F("%)</td></tr>");
   page += F("<tr><td><b>Hostname</b></td><td>"); page += Hostname; page += F("</td></tr>");
   if (static_cast<uint32_t>(WiFi.localIP()) != 0) {
     page += F("<tr><td><b>IP address</b></td><td>"); page += WiFi.localIP().toString(); page += F("</td></tr>");
@@ -1186,7 +1222,7 @@ boolean captivePortal()
 /** Is this an IP? */
 boolean isIp(String str)
 {
-  for (int i = 0; i < str.length(); i++) {
+  for (uint16_t i = 0; i < str.length(); i++) {
     int c = str.charAt(i);
     if (c != '.' && (c < '0' || c > '9')) {
       return false;

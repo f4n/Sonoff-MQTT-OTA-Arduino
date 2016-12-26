@@ -1,4 +1,77 @@
-/* 2.1.1b-f4n
+/* 3.1.3-f4n
+ * Added plattformio build plan for sonoff-smartsocket with external sensors on serial port
+ * Merge 3.1.3
+ *
+ * 3.1.3 20161225
+ * Extent Domoticz configuration webpage with optional indices
+ * Fix multi relay legacy tele message from tele/sonoff/2/POWER to tele/sonoff/POWER2
+ * Add support for iTead Motor Clockwise/Anticlockwise
+ *
+ * 3.1.2 20161224
+ * Extent command PowerOnState with toggle at power on (option 2 is now option 3!)
+ *
+ * 3.1.1 20161223
+ * Add support for Sonoff Touch and Sonoff 4CH
+ * Update DomoticzIdx and DomoticzKeyIdx with relay/key index (DomoticzIdx1/DomoticzKeyIdx1)
+ * Add command PowerOnState to control relay(s) at power on
+ *
+ * 3.1.0 20161221
+ * Add Sonoff Pow measurement smoothing
+ * Fix serial command topic preamble error
+ * Fix 2.x to 3.x migration inconsistencies
+ *
+ * 3.0.9 20161218
+ * Add Sonoff Pow voltage reading when relay is on but no load present
+ *
+ * 3.0.8 20161218
+ * Add temperature conversion to Fahrenheit as option in user_config.h (TEMP_CONVERSION)
+ *
+ * 3.0.7 20161217
+ * Add user_config_override.h to be used by user to override some defaults in user_config.h
+ * Fix Sonoff Pow low power (down to 4W) intermittent measurements
+ *
+ * 3.0.6 20161217
+ * Fix MQTT_CLIENT_ID starting with % sign as in "%06X"
+ * Add auto power off after PulseTime * 0.1 Sec to relay 1
+ *
+ * 3.0.5 20161215
+ * Add more control over LED with command LedState options
+ *   LED_OFF (0), LED_POWER (1), LED_MQTTSUB (2), LED_POWER_MQTTSUB (3), LED_MQTTPUB (4), LED_POWER_MQTTPUB (5), LED_MQTT (6), LED_POWER_MQTT (7)
+ * Add option WIFI_RETRY (4) to command WifiConfig to allow connection retry to other AP without restart
+ *
+ * 3.0.4 20161211
+ * Fix intermittent Domoticz update misses
+ *
+ * 3.0.3 20161210
+ * Fix compiler warnings
+ * Remove redundant code
+ * Fix Domoticz pushbutton support
+ *
+ * 3.0.2 20161209
+ * Add pushbutton to SwitchMode
+ *
+ * 3.0.1 20161209
+ * Fix initial config
+ *
+ * 3.0.0 20161208
+ * Migrate and clean-up flash layout
+ *   Settings from version 2.x are saved but settings from version 3.x can not be used with version 2.x
+ * Change SEND_TELEMETRY_RSSI to SEND_TELEMETRY_WIFI and add AP and SSID to telemetry
+ * Split long JSON messages
+ * Fix inconsistent status messages
+ * Fix all status messages to return JSON if enabled
+ * Remove relay index in cmnd/sonoff/<relay>/POWER now changed
+ *   to cmnd/sonoff/POWER for single relay units
+ *   and cmnd/sonoff/POWER<relay> for multi relay units like Sonoff dual
+ * Add retain option to Power/Light status controlled by command PowerRetain On|Off
+ *
+ * 2.1.2 20161204
+ * Add support for second wifi AP
+ * Update command WifiConfig
+ * Fix possible WifiManager hang
+ *
+ *
+ * 2.1.1b-f4n
  * Added BH1750 digital light sensor support
  *
  * 2.1.1a-f4n
@@ -61,7 +134,7 @@
  * Fixed some smaller problems e.g. read a proper DS18b20 value on the webpage
  *
  *
- * 2.0.16
+ * 2.0.16 20161118
  * Add alternative sensor driver DS18x20 using OneWire library
  * Change sensor MQTT message from tele/sonoff/TEMPERATURE to tele/sonoff/DHT/TEMPERATURE or
  *   tele/sonoff/DS18B20/TEMPERATURE or tele/sonoff/DS18x20/1/TEMPERATURE
@@ -71,7 +144,7 @@
  * Fix Energy Yesterday reset after restart
  * Add Energy Today restore after controlled restart
  *
- * 2.0.15
+ * 2.0.15 20161116
  * Change TODAY_POWER and PERIOD_POWER to TODAY_ENERGY and PERIOD_ENERGY
  * Fix serial regression
  * Fix syslog hangs when loghost is unavailable

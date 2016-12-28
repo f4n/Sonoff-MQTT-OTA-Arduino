@@ -1,6 +1,19 @@
-/* 3.1.3-f4n
+/* 3.1.5-f4n
+ * Merge 3.1.5
+ *
+ *
+ * 3.1.5 20161228
+ * Fix serial space command exception (28)
+ *
+ * 3.1.4 20161227
+ * Fix MQTT subscribe regression exception (3)
+ * Fix serial empty command exception (28)
+ *
+ *
+ * 3.1.3-f4n
  * Added plattformio build plan for sonoff-smartsocket with external sensors on serial port
  * Merge 3.1.3
+ *
  *
  * 3.1.3 20161225
  * Extent Domoticz configuration webpage with optional indices

@@ -23,7 +23,7 @@
  POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifdef SEND_TELEMETRY_I2C
+#ifdef SEND_TELEMETRY_BMP
 /*********************************************************************************************\
  * BMP085, BMP180, BMP280, BME280 - Pressure and Temperature and Humidy (BME280 only)
  *
@@ -343,7 +343,7 @@ double bmp_convertCtoF(double c)
 double bmp_readTemperature(bool S)
 {
   double t = NAN;
-  
+
   switch (bmptype) {
   case BMP180_CHIPID:
     t = bmp180_readTemperature();
@@ -426,4 +426,4 @@ boolean bmp_detect()
   if (!success) bmptype = 0;
   return success;
 }
-#endif //SEND_TELEMETRY_I2C
+#endif //SEND_TELEMETRY_BMP

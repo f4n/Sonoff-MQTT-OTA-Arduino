@@ -8,7 +8,7 @@ Provide ESP8266 based itead Sonoff with Serial, Web and MQTT control allowing 'O
 - Mac-Address replacer for MQTT topic (to have a unique topic for each device)
 
 
-Current version is **3.1.5-f4n** - See [```sonoff/_releasenotes.ino```](https://github.com/f4n/Sonoff-MQTT-OTA-Arduino/blob/master/sonoff/_releasenotes.ino) for change information.
+Current version is **3.1.5a-f4n** - See [```sonoff/_releasenotes.ino```](https://github.com/f4n/Sonoff-MQTT-OTA-Arduino/blob/master/sonoff/_releasenotes.ino) for change information.
 
 <sup>1)</sup> For external I2C sensors see the extended [wiki](https://github.com/f4n/Sonoff-MQTT-OTA-Arduino/wiki).
 

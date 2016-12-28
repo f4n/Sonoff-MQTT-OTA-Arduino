@@ -24,7 +24,7 @@
  License along with this library; if not, write to the Free Software
  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA	 02110-1301	 USA
  */
-#ifdef SEND_TELEMETRY_I2C
+#ifdef SEND_TELEMETRY_BH1750
 
 // Mögliche I2C Adressen
 #define BH1750_DEFAULT_I2CADDR 0x23
@@ -641,4 +641,4 @@ float bh1750_read()
   return bh1750.readLightLevel();
 }
 
-#endif
+#endif  //SEND_TELEMETRY_BH1750

@@ -488,42 +488,49 @@ void handleRoot()
 #endif  // SEND_TELEMETRY_DHT/2
 
 #if defined(SEND_TELEMETRY_I2C)
-    // TODO if ( detected_sensor == XXX ) {}
-    char itemp[10], iconv[10];
-    snprintf_P(iconv, sizeof(iconv), PSTR("&deg;%c"), (TEMP_CONVERSION) ? 'F' : 'C');
-    if(htu_found()) {
-      float t_htu21 = htu21_readTemperature(TEMP_CONVERSION);
-      float h_htu21 = htu21_readHumidity();
-      h_htu21 = htu21_compensatedHumidity(h_htu21, t_htu21);
-      page += F("<table style='width:100%'>");
-      dtostrf(t_htu21, 1, TEMP_RESOLUTION &3, itemp);
-      page += F("<tr><td>HTU Temperature: </td><td>"); page += itemp; page += iconv; page += F("</td></tr>");
-      dtostrf(h_htu21, 1, HUMIDITY_RESOLUTION &3, itemp);
-      page += F("<tr><td>HTU Humidity: </td><td>"); page += itemp; page += F("%</td></tr>");
-      page += F("</table><br/>");
-    }
-    if(bmp_found()) {
-      double t_bmp = bmp_readTemperature(TEMP_CONVERSION);
-      double p_bmp = bmp_readPressure();
-      double h_bmp = bmp_readHumidity();
-      page += F("<table style='width:100%'>");
-      dtostrf(t_bmp, 1, TEMP_RESOLUTION &3, itemp);
-      page += F("<tr><td>BMP Temperature: </td><td>"); page += itemp; page += iconv; page += F("</td></tr>");
-      if (!strcmp(bmp_type(),"BME280")) {
-        dtostrf(h_bmp, 1, HUMIDITY_RESOLUTION &3, itemp);
-        page += F("<tr><td>BMP Humidity: </td><td>"); page += itemp; page += F("%</td></tr>");
+    if ( detected_sensor == SEND_TELEMETRY_I2C ) {
+      char itemp[10], iconv[10];
+      snprintf_P(iconv, sizeof(iconv), PSTR("&deg;%c"), (TEMP_CONVERSION) ? 'F' : 'C');
+  #if defined(SEND_TELEMETRY_HTU21)
+      if(htu_found()) {
+        float t_htu21 = htu21_readTemperature(TEMP_CONVERSION);
+        float h_htu21 = htu21_readHumidity();
+        h_htu21 = htu21_compensatedHumidity(h_htu21, t_htu21);
+        page += F("<table style='width:100%'>");
+        dtostrf(t_htu21, 1, TEMP_RESOLUTION &3, itemp);
+        page += F("<tr><td>HTU Temperature: </td><td>"); page += itemp; page += iconv; page += F("</td></tr>");
+        dtostrf(h_htu21, 1, HUMIDITY_RESOLUTION &3, itemp);
+        page += F("<tr><td>HTU Humidity: </td><td>"); page += itemp; page += F("%</td></tr>");
+        page += F("</table><br/>");
       }
-      dtostrf(p_bmp, 1, PRESSURE_RESOLUTION &3, itemp);
-      page += F("<tr><td>BMP Pressure: </td><td>"); page += itemp; page += F(" hPa</td></tr>");
-      page += F("</table><br/>");
+  #endif //SEND_TELEMETRY_HTU21
+  #if defined(SEND_TELEMETRY_BMP)
+      if(bmp_found()) {
+        double t_bmp = bmp_readTemperature(TEMP_CONVERSION);
+        double p_bmp = bmp_readPressure();
+        double h_bmp = bmp_readHumidity();
+        page += F("<table style='width:100%'>");
+        dtostrf(t_bmp, 1, TEMP_RESOLUTION &3, itemp);
+        page += F("<tr><td>BMP Temperature: </td><td>"); page += itemp; page += iconv; page += F("</td></tr>");
+        if (!strcmp(bmp_type(),"BME280")) {
+          dtostrf(h_bmp, 1, HUMIDITY_RESOLUTION &3, itemp);
+          page += F("<tr><td>BMP Humidity: </td><td>"); page += itemp; page += F("%</td></tr>");
+        }
+        dtostrf(p_bmp, 1, PRESSURE_RESOLUTION &3, itemp);
+        page += F("<tr><td>BMP Pressure: </td><td>"); page += itemp; page += F(" hPa</td></tr>");
+        page += F("</table><br/>");
+      }
+  #endif //SEND_TELEMETRY_BMP
+  #if defined(SEND_TELEMETRY_BH1750)
+      if(bh1750_found()) {
+        float l_bh1750 = bh1750_read();
+        page += F("<table style='width:100%'>");
+        dtostrf(l_bh1750, 1, LUX_RESOLUTION &3, itemp);
+        page += F("<tr><td>BH1750 Light: </td><td>"); page += itemp; page += F("lux</td></tr>");
+        page += F("</table><br/>");
+      }
     }
-    if(bh1750_found()) {
-      float l_bh1750 = bh1750_read();
-      page += F("<table style='width:100%'>");
-      dtostrf(l_bh1750, 1, LUX_RESOLUTION &3, itemp);
-      page += F("<tr><td>BH1750 Light: </td><td>"); page += itemp; page += F("lux</td></tr>");
-      page += F("</table><br/>");
-    }
+  #endif //SEND_TELEMETRY_BH1750
 #endif  // SEND_TELEMETRY_I2C
 
     if (_httpflag == HTTP_ADMIN) {

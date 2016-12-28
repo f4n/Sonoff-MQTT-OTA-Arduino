@@ -1,4 +1,7 @@
-/* 3.1.5-f4n
+/* 3.1.5a-f4n
+ * Added configuration option to select which I2C sensor is integrated to save memory
+
+ * 3.1.5-f4n
  * Merge 3.1.5
  *
  *

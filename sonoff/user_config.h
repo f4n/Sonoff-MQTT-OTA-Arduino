@@ -173,9 +173,12 @@
 \*-------------------------------------------------------------------------------------------*/
   #define I2C_SDA_PIN          4            // GPIO 04 = I2C SDA (Sonoff_TH10A(16A)- Needs extra hardware)
   #define I2C_SCL_PIN          14           // GPIO 14 = I2C SCL (Sonoff_TH10A(16A))
-//  #define SEND_TELEMETRY_I2C   3            // Enable sending I2C sensor telemetry
 
-//  #USE_SERIAL_PORT_FOR_SENSORS            // On smart socket devices you can use the serial port pins for
+//  #define SEND_TELEMETRY_BH1750   4         // enable BH1750 light sensor
+//  #define SEND_TELEMETRY_BMP      5         // enable BMP pressure sensor
+//  #define SEND_TELEMETRY_HTU21    6         // enable HTU21 humidity sensor
+
+//  #USE_SERIAL_PORT_FOR_SENSORS              // On smart socket devices you can use the serial port pins for
                                             // external sensors
 
 /*********************************************************************************************\
@@ -230,9 +233,12 @@
 \*-------------------------------------------------------------------------------------------*/
   #define I2C_SDA_PIN          8            // GPIO 08 = I2C SDA (Sonoff 4CH - Needs extra hardware)
   #define I2C_SCL_PIN          7            // GPIO 07 = I2C SCL (Sonoff 4CH - Needs extra hardware)
-//  #define SEND_TELEMETRY_I2C   3            // Enable sending I2C sensor telemetry
 
-//  #USE_SERIAL_PORT_FOR_SENSORS            // On smart socket devices you can use the serial port pins for
+//  #define SEND_TELEMETRY_BH1750   4         // enable BH1750 light sensor
+//  #define SEND_TELEMETRY_BMP      5         // enable BMP pressure sensor
+//  #define SEND_TELEMETRY_HTU21    6         // enable HTU21 humidity sensor
+
+//  #USE_SERIAL_PORT_FOR_SENSORS              // On smart socket devices you can use the serial port pins for
                                             // external sensors
 
 /*********************************************************************************************\
@@ -319,7 +325,13 @@
 \*-------------------------------------------------------------------------------------------*/
   #define I2C_SDA_PIN          4            // GPIO 4 = I2C SDA (Sonoff_TH10A(16A)- Needs extra hardware)
   #define I2C_SCL_PIN          14           // GPIO 14 = I2C SCL (Sonoff_TH10A(16A))
-//  #define SEND_TELEMETRY_I2C                // Enable sending I2C sensor telemetry
+
+//  #define SEND_TELEMETRY_BH1750   4         // enable BH1750 light sensor
+//  #define SEND_TELEMETRY_BMP      5         // enable BMP pressure sensor
+//  #define SEND_TELEMETRY_HTU21    6         // enable HTU21 humidity sensor
+
+//  #USE_SERIAL_PORT_FOR_SENSORS              // On smart socket devices you can use the serial port pins for
+                                            // external sensors
 
 /*********************************************************************************************\
  * No user configurable items below
@@ -332,6 +344,10 @@
 #if defined(USE_SERIAL_PORT_FOR_SENSORS)
   #define I2C_SDA_PIN          3            // e.g. for Sonoff Smart Socket
   #define I2C_SCL_PIN          1            // e.g. for Sonoff Smart Socket
+#endif
+
+#if defined(SEND_TELEMETRY_BH1750) || defined(SEND_TELEMETRY_BMP) || defined(SEND_TELEMETRY_HTU21)
+  #define SEND_TELEMETRY_I2C  3
 #endif
 
 #if defined(SEND_TELEMETRY_DS18B20) && defined(SEND_TELEMETRY_DS18x20)

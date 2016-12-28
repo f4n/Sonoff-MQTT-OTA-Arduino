@@ -23,7 +23,7 @@
  POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifdef SEND_TELEMETRY_I2C
+#ifdef SEND_TELEMETRY_HTU21
 /*********************************************************************************************\
  * HTU21 - Temperature and Humidy
  *
@@ -230,4 +230,4 @@ uint8_t htu_detect()
   if (!success) htutype = 0;
   return success;
 }
-#endif //SEND_TELEMETRY_I2C
+#endif //SEND_TELEMETRY_HTU21

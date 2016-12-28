@@ -10,7 +10,7 @@
  * ====================================================
 */
 
-#define VERSION                0x03010500   // 3.1.5
+#define VERSION                0x03010501   // 3.1.5a-f4n
 
 #define SONOFF                 1            // Sonoff, Sonoff RF, Sonoff SV, Sonoff Dual, Sonoff TH, S20 Smart Socket, 4 Channel
 #define SONOFF_POW             9            // Sonoff Pow
@@ -1954,24 +1954,31 @@ void detect_sensor() {
   char log[LOGSZ];
   addLog_P(LOG_LEVEL_DEBUG, PSTR("APP: Try to detect I2C sensors..."));
   Wire.begin(I2C_SDA_PIN,I2C_SCL_PIN);
+
+  #ifdef SEND_TELEMETRY_HTU21
   if (htu_detect()) {
     detected_sensor = SEND_TELEMETRY_I2C;
     snprintf_P(log, sizeof(log), PSTR("APP: ... %s detected at address 0x%x"), htu_type(), htu_address());
     addLog(LOG_LEVEL_DEBUG, log);
     return;
   }
+  #endif //SEND_TELEMETRY_HTU21
+  #ifdef SEND_TELEMETRY_BMP
   if (bmp_detect()) {
     detected_sensor = SEND_TELEMETRY_I2C;
     snprintf_P(log, sizeof(log), PSTR("APP: ... %s detected at address 0x%x"), bmp_type(), bmp_address());
     addLog(LOG_LEVEL_DEBUG, log);
     return;
   }
+  #endif //SEND_TELEMETRY_BMP
+  #ifdef SEND_TELEMETRY_BH1750
   if (bh1750_detect()) {
     detected_sensor = SEND_TELEMETRY_I2C;
     snprintf_P(log, sizeof(log), PSTR("APP: ... BH1750 detected"));
     addLog(LOG_LEVEL_DEBUG, log);
     return;
   }
+  #endif //SEND_TELEMETRY_BH1750
 
   addLog_P(LOG_LEVEL_DEBUG, PSTR("APP: ... false"));
 #endif // SEND_TELEMETRY_I2C
@@ -2066,18 +2073,24 @@ void every_second()
 
 #ifdef SEND_TELEMETRY_I2C
       } else if ( detected_sensor == SEND_TELEMETRY_I2C ) {
+  #ifdef SEND_TELEMETRY_HTU21
         if (htu_detect()) {
           //snprintf_P(log, sizeof(log), PSTR("I2C: %s found at address 0x%x"), htu_type(), htu_address());
           //addLog(LOG_LEVEL_DEBUG, log);
         }
+  #endif //SEND_TELEMETRY_HTU21
+  #ifdef SEND_TELEMETRY_BMP
         if (bmp_detect()) {
           //snprintf_P(log, sizeof(log), PSTR("I2C: %s found at address 0x%x"), bmp_type(), bmp_address());
           //addLog(LOG_LEVEL_DEBUG, log);
         }
+  #endif //SEND_TELEMETRY_BMP
+  #ifdef SEND_TELEMETRY_BH1750
         if (bh1750_detect()) {
           //snprintf_P(log, sizeof(log), PSTR("I2C: BH1750 found"));
           //addLog(LOG_LEVEL_DEBUG, log);
         }
+  #endif //SEND_TELEMETRY_BH1750
 #endif // SEND_TELEMETRY_I2C
 
 
@@ -2205,6 +2218,7 @@ void every_second()
 #ifdef SEND_TELEMETRY_I2C
       } else if ( detected_sensor == SEND_TELEMETRY_I2C ) {
 
+  #ifdef SEND_TELEMETRY_HTU21
         if(htu_found())
         {
           t = htu21_readTemperature(TEMP_CONVERSION);
@@ -2225,6 +2239,8 @@ void every_second()
             mqtt_publish(stopic, svalue);
           }
         }
+  #endif //SEND_TELEMETRY_HTU21
+  #ifdef SEND_TELEMETRY_BMP
         if(bmp_found())
         {
           double t_bmp = bmp_readTemperature(TEMP_CONVERSION);
@@ -2266,6 +2282,8 @@ void every_second()
           }
 
         }
+  #endif //SEND_TELEMETRY_BMP
+  #ifdef SEND_TELEMETRY_BH1750
         if(bh1750_found())
         {
           float l_bh1750 = bh1750_read();
@@ -2280,6 +2298,7 @@ void every_second()
             mqtt_publish(stopic, svalue);
           }
         }
+  #endif //SEND_TELEMETRY_BH1750
 
 #endif // SEND_TELEMETRY_I2C
 

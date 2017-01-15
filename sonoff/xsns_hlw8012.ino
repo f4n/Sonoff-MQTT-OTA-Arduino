@@ -1,26 +1,29 @@
 /*
-Copyright (c) 2016 Theo Arends.  All rights reserved.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
+ ! With Modifications by f4n
 
-- Redistributions of source code must retain the above copyright notice,
-  this list of conditions and the following disclaimer.
-- Redistributions in binary form must reproduce the above copyright notice,
-  this list of conditions and the following disclaimer in the documentation
-  and/or other materials provided with the distribution.
+ Copyright (c) 2016 Theo Arends.  All rights reserved.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-POSSIBILITY OF SUCH DAMAGE.
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are met:
+
+ - Redistributions of source code must retain the above copyright notice,
+   this list of conditions and the following disclaimer.
+ - Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ POSSIBILITY OF SUCH DAMAGE.
 */
 
 #ifdef USE_POWERMONITOR
@@ -96,7 +99,7 @@ void hlw_200mS()
     hlw_cf_timer--;
     if (!hlw_cf_timer) hlw_cf_plen = 0;  // No load for over three seconds
   }
-  
+
   hlw_cf1_timer++;
   if (hlw_cf1_timer >= 8) {
     hlw_cf1_timer = 0;
@@ -227,5 +230,244 @@ void hlw_init()
   hlw_cf1_timer = 0;
   tickerHLW.attach_ms(200, hlw_200mS);
 }
-#endif  // USE_POWERMONITOR
 
+/********************************************************************************************/
+
+boolean hlw_margin(byte type, uint16_t margin, uint16_t value, byte &flag, byte &saveflag)
+{
+  byte change;
+
+  if (!margin) return false;
+  change = saveflag;
+  if (type) {
+    flag = (value > margin);
+  } else {
+    flag = (value < margin);
+  }
+  saveflag = flag;
+  return (change != saveflag);
+}
+
+void hlw_margin_chk()
+{
+  char log[LOGSZ], stopic[TOPSZ], svalue[MESSZ];
+  float ped, pi, pc;
+  uint16_t uped, piv, pe, pw, pu;
+  byte flag, jsonflg;
+
+  if (power_steady_cntr) {
+    power_steady_cntr--;
+    return;
+  }
+
+  hlw_readEnergy(0, ped, pe, pw, pu, pi, pc);
+  if (power && (sysCfg.hlw_pmin || sysCfg.hlw_pmax || sysCfg.hlw_umin || sysCfg.hlw_umax || sysCfg.hlw_imin || sysCfg.hlw_imax)) {
+    piv = (uint16_t)(pi * 1000);
+
+//    snprintf_P(log, sizeof(log), PSTR("HLW: W %d, U %d, I %d"), pw, pu, piv);
+//    addLog(LOG_LEVEL_DEBUG, log);
+
+    if (sysCfg.message_format == JSON) {
+      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/TELEMETRY"), PUB_PREFIX2, MQTTTopic);
+      snprintf_P(svalue, sizeof(svalue), PSTR("{"));
+      jsonflg = 0;
+    }
+    if (hlw_margin(0, sysCfg.hlw_pmin, pw, flag, hlw_pminflg)) {
+      if (sysCfg.message_format == JSON) {
+        snprintf_P(svalue, sizeof(svalue), PSTR("%s%s\"PowerLow\":\"%s\""), svalue, (jsonflg)?", ":"", (flag) ? MQTT_STATUS_ON : MQTT_STATUS_OFF);
+        jsonflg = 1;
+      } else {
+        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/POWER_LOW"), PUB_PREFIX2, MQTTTopic);
+        strlcpy(svalue, (flag) ? MQTT_STATUS_ON : MQTT_STATUS_OFF, sizeof(svalue));
+        mqtt_publish(stopic, svalue);
+      }
+    }
+    if (hlw_margin(1, sysCfg.hlw_pmax, pw, flag, hlw_pmaxflg)) {
+      if (sysCfg.message_format == JSON) {
+        snprintf_P(svalue, sizeof(svalue), PSTR("%s%s\"PowerHigh\":\"%s\""), svalue, (jsonflg)?", ":"", (flag) ? MQTT_STATUS_ON : MQTT_STATUS_OFF);
+        jsonflg = 1;
+      } else {
+        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/POWER_HIGH"), PUB_PREFIX2, MQTTTopic);
+        strlcpy(svalue, (flag) ? MQTT_STATUS_ON : MQTT_STATUS_OFF, sizeof(svalue));
+        mqtt_publish(stopic, svalue);
+      }
+    }
+    if (hlw_margin(0, sysCfg.hlw_umin, pu, flag, hlw_uminflg)) {
+      if (sysCfg.message_format == JSON) {
+        snprintf_P(svalue, sizeof(svalue), PSTR("%s%s\"VoltageLow\":\"%s\""), svalue, (jsonflg)?", ":"", (flag) ? MQTT_STATUS_ON : MQTT_STATUS_OFF);
+        jsonflg = 1;
+      } else {
+        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/VOLTAGE_LOW"), PUB_PREFIX2, MQTTTopic);
+        strlcpy(svalue, (flag) ? MQTT_STATUS_ON : MQTT_STATUS_OFF, sizeof(svalue));
+        mqtt_publish(stopic, svalue);
+      }
+    }
+    if (hlw_margin(1, sysCfg.hlw_umax, pw, flag, hlw_umaxflg)) {
+      if (sysCfg.message_format == JSON) {
+        snprintf_P(svalue, sizeof(svalue), PSTR("%s%s\"VoltageHigh\":\"%s\""), svalue, (jsonflg)?", ":"", (flag) ? MQTT_STATUS_ON : MQTT_STATUS_OFF);
+        jsonflg = 1;
+      } else {
+        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/VOLTAGE_HIGH"), PUB_PREFIX2, MQTTTopic);
+        strlcpy(svalue, (flag) ? MQTT_STATUS_ON : MQTT_STATUS_OFF, sizeof(svalue));
+        mqtt_publish(stopic, svalue);
+      }
+    }
+    if (hlw_margin(0, sysCfg.hlw_imin, piv, flag, hlw_iminflg)) {
+      if (sysCfg.message_format == JSON) {
+        snprintf_P(svalue, sizeof(svalue), PSTR("%s%s\"CurrentLow\":\"%s\""), svalue, (jsonflg)?", ":"", (flag) ? MQTT_STATUS_ON : MQTT_STATUS_OFF);
+        jsonflg = 1;
+      } else {
+        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/CURRENT_LOW"), PUB_PREFIX2, MQTTTopic);
+        strlcpy(svalue, (flag) ? MQTT_STATUS_ON : MQTT_STATUS_OFF, sizeof(svalue));
+        mqtt_publish(stopic, svalue);
+      }
+    }
+    if (hlw_margin(1, sysCfg.hlw_imax, piv, flag, hlw_imaxflg)) {
+      if (sysCfg.message_format == JSON) {
+        snprintf_P(svalue, sizeof(svalue), PSTR("%s%s\"CurrentHigh\":\"%s\""), svalue, (jsonflg)?", ":"", (flag) ? MQTT_STATUS_ON : MQTT_STATUS_OFF);
+        jsonflg = 1;
+      } else {
+        snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/CURRENT_HIGH"), PUB_PREFIX2, MQTTTopic);
+        strlcpy(svalue, (flag) ? MQTT_STATUS_ON : MQTT_STATUS_OFF, sizeof(svalue));
+        mqtt_publish(stopic, svalue);
+      }
+    }
+    if (jsonflg) {
+      snprintf_P(svalue, sizeof(svalue), PSTR("%s}"), svalue);
+      mqtt_publish(stopic, svalue);
+    }
+  }
+
+#ifdef FEATURE_POWER_LIMIT
+  snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/RESULT"), PUB_PREFIX, MQTTTopic);
+  // Max Power
+  if (sysCfg.hlw_mpl) {
+    if (pw > sysCfg.hlw_mpl) {
+      if (!hlw_mplh_counter) {
+        hlw_mplh_counter = sysCfg.hlw_mplh;
+      } else {
+        hlw_mplh_counter--;
+        if (!hlw_mplh_counter) {
+          snprintf_P(svalue, sizeof(svalue), PSTR("{\"MaxPowerReached\":\"%d%s\"}"), pw, (sysCfg.mqtt_units) ? " W" : "");
+          if (sysCfg.message_format != JSON) json2legacy(stopic, svalue);
+          mqtt_publish(stopic, svalue);
+          do_cmnd_power(1, 0);
+          if (!hlw_mplr_counter) hlw_mplr_counter = MAX_POWER_RETRY +1;
+          hlw_mplw_counter = sysCfg.hlw_mplw;
+        }
+      }
+    }
+    else if (power && (pw <= sysCfg.hlw_mpl)) {
+      hlw_mplh_counter = 0;
+      hlw_mplr_counter = 0;
+      hlw_mplw_counter = 0;
+    }
+    if (!power) {
+      if (hlw_mplw_counter) {
+        hlw_mplw_counter--;
+      } else {
+        if (hlw_mplr_counter) {
+          hlw_mplr_counter--;
+          if (hlw_mplr_counter) {
+            snprintf_P(svalue, sizeof(stopic), PSTR("{\"PowerMonitor\":\"%s\"}"), MQTT_STATUS_ON);
+            if (sysCfg.message_format != JSON) json2legacy(stopic, svalue);
+            mqtt_publish(stopic, svalue);
+            do_cmnd_power(1, 1);
+          } else {
+            snprintf_P(svalue, sizeof(stopic), PSTR("{\"MaxPowerReachedRetry\":\"%s\"}"), MQTT_STATUS_OFF);
+            if (sysCfg.message_format != JSON) json2legacy(stopic, svalue);
+            mqtt_publish(stopic, svalue);
+          }
+        }
+      }
+    }
+  }
+
+  // Max Energy
+  if (sysCfg.hlw_mkwh) {
+    uped = (uint16_t)(ped * 1000);
+    if (!hlw_mkwh_state && (rtcTime.Hour == sysCfg.hlw_mkwhs)) {
+      hlw_mkwh_state = 1;
+      snprintf_P(svalue, sizeof(stopic), PSTR("{\"EnergyMonitor\":\"%s\"}"), MQTT_STATUS_ON);
+      if (sysCfg.message_format != JSON) json2legacy(stopic, svalue);
+      mqtt_publish(stopic, svalue);
+      do_cmnd_power(1, 1);
+    }
+    else if ((hlw_mkwh_state == 1) && (uped >= sysCfg.hlw_mkwh)) {
+      hlw_mkwh_state = 2;
+      dtostrf(ped, 1, 3, svalue);
+      snprintf_P(svalue, sizeof(svalue), PSTR("{\"MaxEnergyReached\":\"%s%s\"}"), svalue, (sysCfg.mqtt_units) ? " kWh" : "");
+      if (sysCfg.message_format != JSON) json2legacy(stopic, svalue);
+      mqtt_publish(stopic, svalue);
+      do_cmnd_power(1, 0);
+    }
+  }
+#endif  // FEATURE_POWER_LIMIT
+}
+
+/*********************************************************************************************\
+ * Presentation
+\*********************************************************************************************/
+
+void hlw_mqttPresent(char* stopic, uint16_t sstopic, char* svalue, uint16_t ssvalue, uint8_t* djson)
+{
+  char stime[21], stemp0[10], stemp1[10], stemp2[10], stemp3[10];
+  float ped, pi, pc;
+  uint16_t pe, pw, pu;
+
+  snprintf_P(stime, sizeof(stime), PSTR("%04d-%02d-%02dT%02d:%02d:%02d"),
+    rtcTime.Year, rtcTime.Month, rtcTime.Day, rtcTime.Hour, rtcTime.Minute, rtcTime.Second);
+  hlw_readEnergy(1, ped, pe, pw, pu, pi, pc);
+  dtostrf((float)sysCfg.hlw_kWhyesterday / 100000000, 1, 3, stemp0);
+  dtostrf(ped, 1, 3, stemp1);
+  dtostrf(pc, 1, 2, stemp2);
+  dtostrf(pi, 1, 3, stemp3);
+  if (sysCfg.message_format == JSON) {
+    snprintf_P(svalue, ssvalue, PSTR("{\"Time\":\"%s\", \"Energy\":{\"Yesterday\":\"%s\", \"Today\":\"%s\", \"Period\":%d, \"Power\":%d, \"Factor\":\"%s\", \"Voltage\":%d, \"Current\":\"%s\"}}"),
+      stime, stemp0, stemp1, pe, pw, stemp2, pu, stemp3);
+    mqtt_publish(stopic, svalue);
+  } else {
+    snprintf_P(stopic, sstopic, PSTR("%s/%s/YESTERDAY_ENERGY"), PUB_PREFIX2, MQTTTopic);
+    snprintf_P(svalue, ssvalue, PSTR("%s%s"), stemp0, (sysCfg.mqtt_units) ? " kWh" : "");
+    mqtt_publish(stopic, svalue);
+    snprintf_P(stopic, sstopic, PSTR("%s/%s/TODAY_ENERGY"), PUB_PREFIX2, MQTTTopic);
+    snprintf_P(svalue, ssvalue, PSTR("%s%s"), stemp1, (sysCfg.mqtt_units) ? " kWh" : "");
+    mqtt_publish(stopic, svalue);
+    snprintf_P(stopic, sstopic, PSTR("%s/%s/PERIOD_ENERGY"), PUB_PREFIX2, MQTTTopic);
+    snprintf_P(svalue, ssvalue, PSTR("%d%s"), pe, (sysCfg.mqtt_units) ? " Wh" : "");
+    mqtt_publish(stopic, svalue);
+    snprintf_P(stopic, sstopic, PSTR("%s/%s/CURRENT_POWER"), PUB_PREFIX2, MQTTTopic);
+    snprintf_P(svalue, ssvalue, PSTR("%d%s"), pw, (sysCfg.mqtt_units) ? " W" : "");
+    mqtt_publish(stopic, svalue);
+    snprintf_P(stopic, sstopic, PSTR("%s/%s/POWER_FACTOR"), PUB_PREFIX2, MQTTTopic);
+    mqtt_publish(stopic, stemp2);
+    snprintf_P(stopic, sstopic, PSTR("%s/%s/VOLTAGE"), PUB_PREFIX2, MQTTTopic);
+    snprintf_P(svalue, ssvalue, PSTR("%d%s"), pu, (sysCfg.mqtt_units) ? " V" : "");
+    mqtt_publish(stopic, svalue);
+    snprintf_P(stopic, sstopic, PSTR("%s/%s/CURRENT"), PUB_PREFIX2, MQTTTopic);
+    snprintf_P(svalue, ssvalue, PSTR("%s%s"), stemp3, (sysCfg.mqtt_units) ? " A" : "");
+    mqtt_publish(stopic, svalue);
+  }
+}
+
+String hlw_webPresent()
+{
+  char stemp[10];
+  float ped, pi, pc;
+  uint16_t pe, pw, pu;
+  String page = "";
+
+  hlw_readEnergy(0, ped, pe, pw, pu, pi, pc);
+  page += F("<tr><td>Voltage: </td><td>"); page += String(pu); page += F(" V</td></tr>");
+  dtostrf(pi, 1, 3, stemp);
+  page += F("<tr><td>Current: </td><td>"); page += stemp; page += F(" A</td></tr>");
+  page += F("<tr><td>Power: </td><td>"); page += String(pw); page += F(" W</td></tr>");
+  dtostrf(pc, 1, 2, stemp);
+  page += F("<tr><td>Power Factor: </td><td>"); page += stemp; page += F("</td></tr>");
+  dtostrf(ped, 1, 3, stemp);
+  page += F("<tr><td>Energy Today: </td><td>"); page += stemp; page += F(" kWh</td></tr>");
+  dtostrf((float)sysCfg.hlw_kWhyesterday / 100000000, 1, 3, stemp);
+  page += F("<tr><td>Energy Yesterday: </td><td>"); page += stemp; page += F(" kWh</td></tr>");
+  return page;
+}
+#endif  // USE_POWERMONITOR

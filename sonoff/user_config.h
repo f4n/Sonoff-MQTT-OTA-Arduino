@@ -49,6 +49,8 @@
 #endif
 
 // -- MQTT -----------------------------------
+#define USE_MQTT                            // Enable MQTT and Domoticz (+10k code, +1k mem)
+
 // !!! TLS uses a LOT OF MEMORY (20k) so be careful to enable other options at the same time !!!
 //#define USE_MQTT_TLS                        // EXPERIMENTAL Use TLS for MQTT connection (+53k code, +20k mem)
                                             //   Needs Fingerprint, TLS Port, UserId and Password
@@ -76,8 +78,9 @@
 #define MQTT_POWER_RETAIN      0            // [PowerRetain] Power status message may send retain flag (0 = off, 1 = on)
 
 #define MESSAGE_FORMAT         LEGACY       // [MessageFormat] MQTT Message Format (LEGACY or JSON)
-#define MQTT_STATUS_ON         "ON"         // Status result when turned on (needs to be a string like "1" or "On")
-#define MQTT_STATUS_OFF        "OFF"        // Status result when turned off (needs to be a string like "0" or "Off")
+#define MQTT_STATUS_OFF        "OFF"        // Command or Status result when turned off (needs to be a string like "0" or "Off")
+#define MQTT_STATUS_ON         "ON"         // Command or Status result when turned on (needs to be a string like "1" or "On")
+#define MQTT_CMND_TOGGLE       "TOGGLE"     // Command to send when toggling (needs to be a string like "2" or "Toggle")
 
 // -- MQTT - Telemetry -----------------------
 #define TELE_PERIOD            300          // [TelePeriod] Telemetry (0 = disable, 10 - 3600 seconds)
@@ -101,8 +104,14 @@
 
 // -- HTTP -----------------------------------
 #define USE_WEBSERVER                       // Enable web server and wifi manager (+43k code, +2k mem) - Disable by //
-//  #define USE_WEMO_EMULATION                // Enable Belkin WeMo PowerSwitch emulation for Alexa (+4k code, +2k mem)
+  #define FRIENDLY_NAME        "Sonoff"     // [FriendlyName] Friendlyname up to 32 characters used by webpages and Alexa
   #define WEB_SERVER           2            // [WebServer] Web server (0 = Off, 1 = Start as User, 2 = Start as Admin)
+//  #define USE_WEMO_EMULATION                // Enable Belkin WeMo PowerSwitch emulation for Alexa (+4k code, +2k mem)
+
+// -- mDNS -----------------------------------
+#define USE_DISCOVERY                       // Enable mDNS for the following services (+8k code, +0.3k mem)
+  #define WEBSERVER_ADVERTISE               // Provide access to webserver by name <Hostname>.local/
+  #define MQTT_HOST_DISCOVERY               // Find MQTT host server (overrides MQTT_HOST if found)
 
   #define WEB_SERVER_AUTHENTICATION         // Comment out to disable webserver username/password authentication
   #define WEB_SERVER_USER        "sonoff"   // Webserver login user
@@ -124,6 +133,8 @@
 #define APP_LEDSTATE           LED_POWER    // [LedState] Function of led (LED_OFF, LED_POWER, LED_MQTTSUB, LED_POWER_MQTTSUB, LED_MQTTPUB, LED_POWER_MQTTPUB, LED_MQTT, LED_POWER_MQTT)
 #define APP_PULSETIME          0            // [PulseTime] Time in 0.1 Sec to turn off power for relay 1 (0 = disabled)
 #define APP_POWERON_STATE      3            // [PowerOnState] Power On Relay state (0 = Off, 1 = On, 2 = Toggle Saved state, 3 = Saved state)
+#define APP_BLINKTIME          10           // [BlinkTime] Time in 0.1 Sec to blink/toggle power for relay 1
+#define APP_BLINKCOUNT         10           // [BlinkCount] Number of blinks (0 = 32000)
 
 #define TEMP_CONVERSION        0            // Convert temperature to (0 = Celsius or 1 = Fahrenheit)
 #define TEMP_RESOLUTION        1            // Maximum number of decimals (0 - 3) showing sensor Temperature
@@ -138,7 +149,7 @@
 \*********************************************************************************************/
 
 #if MODULE == SONOFF                        // programming header 1:3.3V 2:rx 3:tx 4:gnd
-  #define APP_NAME             "Sonoff 8266 module"
+  #define APP_NAME             "Sonoff 8266 Module"
   #define MQTT_GRPTOPIC        "sonoffs"    // [GroupTopic] MQTT Group topic
 /*-------------------------------------------------------------------------------------------*/
   #define LED_PIN              13           // GPIO 13 = Green/Blue Led (0 = On, 1 = Off) - Sonoff
@@ -169,7 +180,7 @@
   // *** Option 2 - Use Adafruit DHT library - Select either Option 1 OR Option 2
 //  #define SEND_TELEMETRY_DHT2  2             // Enable sending temperature and humidity telemetry
 /*-------------------------------------------------------------------------------------------*\
- * I2C devices BMP085, BMP180, BMP280, BME280 and HTU21D
+ * I2C devices BH1750, BMP085, BMP180, BMP280, BME280 and HTU21D
 \*-------------------------------------------------------------------------------------------*/
   #define I2C_SDA_PIN          4            // GPIO 04 = I2C SDA (Sonoff_TH10A(16A)- Needs extra hardware)
   #define I2C_SCL_PIN          14           // GPIO 14 = I2C SCL (Sonoff_TH10A(16A))
@@ -188,7 +199,7 @@
 \*********************************************************************************************/
 
 #elif MODULE == SONOFF_2                    // programming header 1:3.3V 2:rx 3:tx 4:gnd
-  #define APP_NAME             "Sonoff 8285 module"
+  #define APP_NAME             "Sonoff 8285 Module"
   #define MQTT_GRPTOPIC        "sonoff2s"   // [GroupTopic] MQTT Group topic
 /*-------------------------------------------------------------------------------------------*/
   #define LED_PIN              13           // GPIO 13 = Green/Blue Led (0 = On, 1 = Off) - Sonoff
@@ -229,7 +240,7 @@
   // *** Option 2 - Use Adafruit DHT library - Select either Option 1 OR Option 2
 //  #define SEND_TELEMETRY_DHT2               // Enable sending temperature and humidity telemetry
 /*-------------------------------------------------------------------------------------------*\
- * I2C devices BMP085, BMP180, BMP280, BME280 and HTU21D
+ * I2C devices BH1750, BMP085, BMP180, BMP280, BME280 and HTU21D
 \*-------------------------------------------------------------------------------------------*/
   #define I2C_SDA_PIN          8            // GPIO 08 = I2C SDA (Sonoff 4CH - Needs extra hardware)
   #define I2C_SCL_PIN          7            // GPIO 07 = I2C SCL (Sonoff 4CH - Needs extra hardware)
@@ -248,7 +259,7 @@
 \*********************************************************************************************/
 
 #elif MODULE == SONOFF_POW                  // programming header 1:3.3V 2:rx 3:tx 4:gnd
-  #define APP_NAME             "Sonoff Pow module"
+  #define APP_NAME             "Sonoff Pow Module"
   #define MQTT_GRPTOPIC        "pows"       // [GroupTopic] MQTT Group topic
   #define USE_POWERMONITOR                  // Enable Power Monitoring
 //  #define USE_POWERCALIBRATION              // Enable setting Calibration parameters by user commands
@@ -273,7 +284,7 @@
 \*********************************************************************************************/
 
 #elif MODULE == MOTOR_CAC                   // programming pins 6:3.3V 7:rx 8:tx 9:gnd of PSA-B
-  #define APP_NAME             "Motor C/AC module"
+  #define APP_NAME             "Motor C/AC Module"
   #define MQTT_GRPTOPIC        "motors"     // [GroupTopic] MQTT Group topic
 /*-------------------------------------------------------------------------------------------*/
   #define LED_PIN              13           // GPIO 13 = Green/Blue Led (0 = On, 1 = Off) - Sonoff
@@ -288,7 +299,7 @@
 \*********************************************************************************************/
 
 #elif MODULE == ELECTRO_DRAGON              // programming header 5V/3V/gnd/
-  #define APP_NAME             "ElectroDragon module"
+  #define APP_NAME             "ElectroDragon Module"
   #define MQTT_GRPTOPIC        "dragons"    // [GroupTopic] MQTT Group topic
 /*-------------------------------------------------------------------------------------------*/
   #define LED_PIN              16           // GPIO 16 = Led (0 = Off, 1 = On)
@@ -321,7 +332,7 @@
   // *** Option 2 - Use Adafruit DHT library - Select either Option 1 OR Option 2
 //  #define SEND_TELEMETRY_DHT2  2             // Enable sending temperature and humidity telemetry
 /*-------------------------------------------------------------------------------------------*\
- * I2C devices BMP085, BMP180, BMP280, BME280 and HTU21D
+ * I2C devices BH1750, BMP085, BMP180, BMP280, BME280 and HTU21D
 \*-------------------------------------------------------------------------------------------*/
   #define I2C_SDA_PIN          4            // GPIO 4 = I2C SDA (Sonoff_TH10A(16A)- Needs extra hardware)
   #define I2C_SCL_PIN          14           // GPIO 14 = I2C SCL (Sonoff_TH10A(16A))
@@ -342,6 +353,8 @@
 #endif
 
 #if defined(USE_SERIAL_PORT_FOR_SENSORS)
+  #undef I2C_SDA_PIN
+  #undef I2C_SCL_PIN
   #define I2C_SDA_PIN          3            // e.g. for Sonoff Smart Socket
   #define I2C_SCL_PIN          1            // e.g. for Sonoff Smart Socket
 #endif
@@ -358,7 +371,7 @@
   #error "Select either SEND_TELEMETRY_DHT or SEND_TELEMETRY_DHT2"
 #endif
 
-#if defined(SEND_TELEMETRY_DS18B20) || defined(SEND_TELEMETRY_DHT)
+#if defined(SEND_TELEMETRY_DS18B20) || defined(SEND_TELEMETRY_DHT) || defined(SEND_TELEMETRY_I2C)
 #define USE_EXTERNAL_SENSOR               // Configures to detect the external sensor
 #endif
 

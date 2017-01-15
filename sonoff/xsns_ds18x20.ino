@@ -1,26 +1,29 @@
 /*
-Copyright (c) 2016 Theo Arends.  All rights reserved.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
+ ! With Modifications by f4n
 
-- Redistributions of source code must retain the above copyright notice,
-  this list of conditions and the following disclaimer.
-- Redistributions in binary form must reproduce the above copyright notice,
-  this list of conditions and the following disclaimer in the documentation
-  and/or other materials provided with the distribution.
+ Copyright (c) 2016 Theo Arends.  All rights reserved.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-POSSIBILITY OF SUCH DAMAGE.
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are met:
+
+ - Redistributions of source code must retain the above copyright notice,
+   this list of conditions and the following disclaimer.
+ - Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ POSSIBILITY OF SUCH DAMAGE.
 */
 
 #ifdef SEND_TELEMETRY_DS18x20
@@ -149,5 +152,57 @@ boolean ds18x20_read(uint8_t sensor, bool S, float &t)
     }
   }
   return (!isnan(t));
+}
+
+/*********************************************************************************************\
+ * Presentation
+\*********************************************************************************************/
+
+void ds18x20_mqttPresent(char* stopic, uint16_t sstopic, char* svalue, uint16_t ssvalue, uint8_t* djson)
+{
+  char stemp1[10], stemp2[10];
+  float t;
+
+  byte dsxflg = 0;
+  for (byte i = 0; i < ds18x20_sensors(); i++) {
+    if (ds18x20_read(i, TEMP_CONVERSION, t)) {           // Check if read failed
+      dtostrf(t, 1, TEMP_RESOLUTION &3, stemp2);
+      if (sysCfg.message_format == JSON) {
+        if (!dsxflg) {
+          snprintf_P(svalue, ssvalue, PSTR("%s, \"DS18x20\":{"), svalue);
+          *djson = 1;
+          stemp1[0] = '\0';
+          dsxflg = 1;
+        }
+        snprintf_P(svalue, ssvalue, PSTR("%s%s\"DS%d\":{\"Type\":\"%s\", \"Address\":\"%s\", \"Temperature\":\"%s\"}"),
+          svalue, stemp1, i +1, ds18x20_type(i).c_str(), ds18x20_address(i).c_str(), stemp2);
+        strcpy(stemp1, ", ");
+      } else {
+        snprintf_P(stopic, sstopic, PSTR("%s/%s/%s/%d/ADDRESS"), PUB_PREFIX2, MQTTTopic, ds18x20_type(i).c_str(), i +1);
+        snprintf_P(svalue, ssvalue, PSTR("%s"), ds18x20_address(i).c_str());
+        mqtt_publish(stopic, svalue);
+        snprintf_P(stopic, sstopic, PSTR("%s/%s/%s/%d/TEMPERATURE"), PUB_PREFIX2, MQTTTopic, ds18x20_type(i).c_str(), i +1);
+        snprintf_P(svalue, ssvalue, PSTR("%s%s"), stemp2, (sysCfg.mqtt_units) ? (TEMP_CONVERSION) ? " F" : " C" : "");
+        mqtt_publish(stopic, svalue);
+      }
+    }
+  }
+  if (dsxflg) snprintf_P(svalue, ssvalue, PSTR("%s}"), svalue);
+}
+
+String ds18x20_webPresent()
+{
+  char stemp[10], sconv[10];
+  float t;
+  String page = "";
+
+  snprintf_P(sconv, sizeof(sconv), PSTR("&deg;%c"), (TEMP_CONVERSION) ? 'F' : 'C');
+  for (byte i = 0; i < ds18x20_sensors(); i++) {
+    if (ds18x20_read(i, TEMP_CONVERSION, t)) {   // Check if read failed
+      dtostrf(t, 1, TEMP_RESOLUTION &3, stemp);
+      page += F("<tr><td>DS"); page += String(i +1); page += F(" Temperature: </td><td>"); page += stemp; page += sconv; page += F("</td></tr>");
+    }
+  }
+  return page;
 }
 #endif  // SEND_TELEMETRY_DS18x20

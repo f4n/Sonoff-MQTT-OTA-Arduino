@@ -6,6 +6,7 @@ Provide ESP8266 based itead Sonoff with Serial, Web and MQTT control allowing 'O
 - Support for BH1750 digital I2C light sensor
 - Basic webserver authentication (protect against configuration changes)
 - Mac-Address replacer for MQTT topic (to have a unique topic for each device)
+- Docker and platformio based build script, for continuous integration or command line builds, just run build.sh
 
 
 Current version is **3.2.2-f4n** - See [```sonoff/_releasenotes.ino```](https://github.com/f4n/Sonoff-MQTT-OTA-Arduino/blob/master/sonoff/_releasenotes.ino) for change information.

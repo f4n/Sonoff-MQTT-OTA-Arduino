@@ -7,3 +7,4 @@ git_pull.sh
 git_push.sh
 .clang_complete
 .gcc-flags.json
+/target

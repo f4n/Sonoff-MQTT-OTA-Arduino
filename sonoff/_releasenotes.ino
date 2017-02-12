@@ -1,4 +1,59 @@
-/* 3.2.2-f4n
+/* 3.2.13-f4n
+ * Merge 3.2.13
+ *
+ *
+ * 3.2.13 20170127
+ * Prep for 4.0: Remove Legacy Info, Warning, Commands and Status messages
+ * Add sleep status to StatusPRM message
+ * Fix Hue brightness and change to call by reference (#283)
+ *
+ * 3.2.12 20170126
+ * Add command Sleep 0 - 250 mSec for optional light sleep mode to lower energy consumption (#272)
+ *   (Expect overall button/key/switch misses and wrong values on Sonoff Pow)
+ * Add Hue brightness extension (#281)
+ *
+ * 3.2.11 20170126
+ * Add confirmation before Restart via webpage
+ * Fix possible ESP8285 flash problem by updating Flash Chip Mode to DOUT during web upload
+ * Fix LedPower status after button press (#279)
+ *
+ * 3.2.10 20170124
+ * Add confirmation before Reset Configuration via webpage (#244)
+ * Add WS2812 features (see Wiki commands)
+ *
+ * 3.2.9 20170124
+ * Fix compile error when MQTT is disabled (#269)
+ *
+ * 3.2.8 20170124
+ * Change PowerOnState function to only trigger when Power On (and not on restart) (#238)
+ * Add command LedPower On|Off to control main led (#247)
+ * Add charset=utf-8 to webpages (#266)
+ * Update Hue emulation (#268)
+ * Rewrite WS2812 code and prep for 4.0
+ * Add support for domoticz Dimmer on WS2812
+ * Add commands SwitchTopic and SwitchRetain On|Off to be used with external switch instead of ButtonTopic and ButtonRetain
+ * Enforce at least IDE 1.6.10 and ESP8266 2.3.0
+ *
+ * 3.2.7 20170122
+ * Move HLW interrupts back to RAM as it generates Exception on Pow (#264)
+ *
+ * 3.2.6 20170119
+ * Fix Sonoff Pow compile error (#255)
+ * Move HLW interrupts back to ROM
+ *
+ * 3.2.5 20170119
+ * Add more FriendlyNames for Hue (#254)
+ * Add DMA support for WS2812 when using pin 3
+ *
+ * 3.2.4 20170118
+ * Add HUE emulation for Alexa (#229)
+ * Add basic WS2812 support (#229)
+ *
+ * 3.2.3 20170116
+ * Fix Wemo when MQTT is disabled (#245)
+ *
+ *
+ * 3.2.2-f4n
  * Merge 3.2.2
  *
  *

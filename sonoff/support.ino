@@ -220,47 +220,27 @@ void CFG_Erase()
 void CFG_Dump()
 {
   #define CFG_COLS 16
+  
   char log[LOGSZ];
-  uint8_t buffer[((sizeof(SYSCFG)+CFG_COLS)/CFG_COLS)*CFG_COLS];
-  uint16_t idx, row, col;
+  uint16_t idx, maxrow, row, col;
 
-  if (spiffsPresent()) {
-    if (!spiffsflag) {
-#ifdef USE_SPIFFS
-      File f = SPIFFS.open(SPIFFS_CONFIG, "r+");
-      if (f) {
-        uint8_t *bytes = (uint8_t*)&buffer;
-        for (int i = 0; i < sizeof(buffer); i++) bytes[i] = f.read();
-        f.close();
-        addLog(LOG_LEVEL_INFO, PSTR("Config: Loaded buffer from spiffs"));
-      } else {
-        addLog_P(LOG_LEVEL_ERROR, PSTR("Config: ERROR - Loading buffer failed"));
-      }
-    } else {
-#endif  // USE_SPIFFS
-      noInterrupts();
-      spi_flash_read((CFG_LOCATION + (sysCfg.saveFlag &1)) * SPI_FLASH_SEC_SIZE, (uint32*)&buffer, sizeof(buffer));
-      interrupts();
-      snprintf_P(log, sizeof(log), PSTR("Config: Loaded buffer from flash at %X"), CFG_LOCATION + (sysCfg.saveFlag &1));
-      addLog(LOG_LEVEL_INFO, log);
+  uint8_t *buffer = (uint8_t *) &sysCfg;
+  maxrow = ((sizeof(SYSCFG)+CFG_COLS)/CFG_COLS);
+
+  for (row = 0; row < maxrow; row++) {
+    idx = row * CFG_COLS;
+    snprintf_P(log, sizeof(log), PSTR("%04X:"), idx);
+    for (col = 0; col < CFG_COLS; col++) {
+      if (!(col%4)) snprintf_P(log, sizeof(log), PSTR("%s "), log);
+      snprintf_P(log, sizeof(log), PSTR("%s %02X"), log, buffer[idx + col]);
     }
-    for (row = 0; row < sizeof(buffer)/CFG_COLS; row++) {
-      idx = row * CFG_COLS;
-      snprintf_P(log, sizeof(log), PSTR("%04X:"), idx);
-      for (col = 0; col < CFG_COLS; col++) {
-        if (!(col%4)) snprintf_P(log, sizeof(log), PSTR("%s "), log);
-        snprintf_P(log, sizeof(log), PSTR("%s %02X"), log, buffer[idx + col]);
-      }
-      snprintf_P(log, sizeof(log), PSTR("%s |"), log);
-      for (col = 0; col < CFG_COLS; col++) {
-//        if (!(col%4)) snprintf_P(log, sizeof(log), PSTR("%s "), log);
-        snprintf_P(log, sizeof(log), PSTR("%s%c"), log, ((buffer[idx + col] > 0x20) && (buffer[idx + col] < 0x7F)) ? (char)buffer[idx + col] : ' ');
-      }
-      snprintf_P(log, sizeof(log), PSTR("%s|"), log);
-      addLog(LOG_LEVEL_INFO, log);
+    snprintf_P(log, sizeof(log), PSTR("%s |"), log);
+    for (col = 0; col < CFG_COLS; col++) {
+//      if (!(col%4)) snprintf_P(log, sizeof(log), PSTR("%s "), log);
+      snprintf_P(log, sizeof(log), PSTR("%s%c"), log, ((buffer[idx + col] > 0x20) && (buffer[idx + col] < 0x7F)) ? (char)buffer[idx + col] : ' ');
     }
-  } else {
-    addLog_P(LOG_LEVEL_ERROR, PSTR("Config: ERROR - No SPIFFS present"));
+    snprintf_P(log, sizeof(log), PSTR("%s|"), log);
+    addLog(LOG_LEVEL_INFO, log);
   }
 }
 
@@ -375,7 +355,9 @@ void WIFI_config(uint8_t type)
 {
   if (!_wificonfigflag) {
     if (type == WIFI_RETRY) return;
-    if (udpConnected) WiFiUDP::stopAll();
+#if defined(USE_WEMO_EMULATION) || defined(USE_HUE_EMULATION)
+    UDP_Disconnect();
+#endif  // USE_WEMO_EMULATION || USE_HUE_EMULATION
     WiFi.disconnect();        // Solve possible Wifi hangs
     _wificonfigflag = type;
     _wifiConfigCounter = WIFI_CONFIG_SEC;   // Allow up to WIFI_CONFIG_SECS seconds for phone to provide ssid/pswd
@@ -410,13 +392,16 @@ void WIFI_begin(uint8_t flag)
   const char PhyMode[] = " BGN";
   char log[LOGSZ];
 
-  if (udpConnected) WiFiUDP::stopAll();
+#if defined(USE_WEMO_EMULATION) || defined(USE_HUE_EMULATION)
+  UDP_Disconnect();
+#endif  // USE_WEMO_EMULATION || USE_HUE_EMULATION
   if (!strncmp(ESP.getSdkVersion(),"1.5.3",5)) {
     addLog_P(LOG_LEVEL_DEBUG, "Wifi: Patch issue 2186");
     WiFi.mode(WIFI_OFF);    // See https://github.com/esp8266/Arduino/issues/2186
   }
   WiFi.disconnect();
   WiFi.mode(WIFI_STA);      // Disable AP mode
+  if (sysCfg.sleep) wifi_set_sleep_type(LIGHT_SLEEP_T);  // Allow light sleep during idle times
 //  if (WiFi.getPhyMode() != WIFI_PHY_MODE_11N) WiFi.setPhyMode(WIFI_PHY_MODE_11N);
   if (!WiFi.getAutoConnect()) WiFi.setAutoConnect(true);
 //  WiFi.setAutoReconnect(true);
@@ -535,12 +520,14 @@ void WIFI_Check(uint8_t param)
         } else {
           stopWebserver();
         }
-#ifdef USE_WEMO_EMULATION
-        if (udpConnected == false) udpConnected = UDP_Connect();
-#endif  // USE_WEMO_EMULATION
+#if defined(USE_WEMO_EMULATION) || defined(USE_HUE_EMULATION)
+        UDP_Connect();
+#endif  // USE_WEMO_EMULATION || USE_HUE_EMULATION
 #endif  // USE_WEBSERVER
       } else {
-        udpConnected = false;
+#if defined(USE_WEMO_EMULATION) || defined(USE_HUE_EMULATION)
+        UDP_Disconnect();
+#endif  // USE_WEMO_EMULATION || USE_HUE_EMULATION
         mDNSbegun = false;
       }
     }
@@ -611,88 +598,6 @@ void IPtoCharArray(IPAddress address, char *ip_str, size_t size)
     str.toCharArray(ip_str, size);
 }
 #endif  // USE_DISCOVERY
-
-#ifdef USE_WEMO_EMULATION
-/*********************************************************************************************\
- * WeMo UPNP support routines
-\*********************************************************************************************/
-const char WEMO_MSEARCH[] PROGMEM =
-  "HTTP/1.1 200 OK\r\n"
-  "CACHE-CONTROL: max-age=86400\r\n"
-  "DATE: Fri, 15 Apr 2016 04:56:29 GMT\r\n"
-  "EXT:\r\n"
-  "LOCATION: http://{r1}:80/setup.xml\r\n"
-  "OPT: \"http://schemas.upnp.org/upnp/1/0/\"; ns=01\r\n"
-  "01-NLS: b9200ebb-736d-4b93-bf03-835149d13983\r\n"
-  "SERVER: Unspecified, UPnP/1.0, Unspecified\r\n"
-  "ST: urn:Belkin:device:**\r\n"
-  "USN: uuid:{r2}::urn:Belkin:device:**\r\n"
-  "X-User-Agent: redsonic\r\n"
-  "\r\n";
-
-String wemo_serial()
-{
-  char serial[15];
-  snprintf_P(serial, sizeof(serial), PSTR("201612K%07d"), ESP.getChipId());
-  return String(serial);
-}
-
-String wemo_UUID()
-{
-  char uuid[26];
-  snprintf_P(uuid, sizeof(uuid), PSTR("Socket-1_0-%s"), wemo_serial().c_str());
-  return String(uuid);
-}
-
-void wemo_respondToMSearch()
-{
-  char message[TOPSZ], log[LOGSZ];
-
-  if (portUDP.beginPacket(portUDP.remoteIP(), portUDP.remotePort())) {
-    String response = FPSTR(WEMO_MSEARCH);
-    response.replace("{r1}", WiFi.localIP().toString());
-    response.replace("{r2}", wemo_UUID());
-    portUDP.write(response.c_str());
-    portUDP.endPacket();
-    snprintf_P(message, sizeof(message), PSTR("Response sent"));
-  } else {
-    snprintf_P(message, sizeof(message), PSTR("Failed to send response"));
-  }
-  snprintf_P(log, sizeof(log), PSTR("UPnP: %s to %s:%d"),
-    message, portUDP.remoteIP().toString().c_str(), portUDP.remotePort());
-  addLog(LOG_LEVEL_DEBUG, log);
-}
-
-void pollUDP()
-{
-  if (udpConnected) {
-    if (portUDP.parsePacket()) {
-      int len = portUDP.read(packetBuffer, WEMO_BUFFER_SIZE -1);
-      if (len > 0) packetBuffer[len] = 0;
-      String request = packetBuffer;
-//      addLog_P(LOG_LEVEL_DEBUG, packetBuffer);
-      if (request.indexOf("M-SEARCH") >= 0) {
-        if (request.indexOf("urn:Belkin:device:**") > 0) {
-          wemo_respondToMSearch();
-        }
-      }
-    }
-  }
-}
-
-boolean UDP_Connect()
-{
-  boolean state = false;
-
-  if (portUDP.beginMulticast(WiFi.localIP(), ipMulticast, portMulticast)) {
-    addLog_P(LOG_LEVEL_INFO, PSTR("UPnP: Multicast (re)joined"));
-    state = true;
-  } else {
-    addLog_P(LOG_LEVEL_INFO, PSTR("UPnP: Multicast join failed"));
-  }
-  return state;
-}
-#endif  // USE_WEMO_EMULATION
 
 /*********************************************************************************************\
  * Basic I2C routines

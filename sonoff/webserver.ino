@@ -38,8 +38,9 @@
 #define STR(x) STR_HELPER(x)
 
 const char HTTP_HEAD[] PROGMEM =
-  "<!DOCTYPE html><html lang=\"en\">"
+  "<!DOCTYPE html><html lang=\"en\" class=\"\">"
   "<head>"
+  "<meta charset='utf-8'>"
   "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1,user-scalable=no\"/>"
   "<title>{v}</title>"
   "<script>"
@@ -100,7 +101,7 @@ const char HTTP_BTN_MENU1[] PROGMEM =
   "<br/><form action='/up' method='post'><button>Firmware upgrade</button></form>"
   "<br/><form action='/cs' method='post'><button>Console</button></form>";
 const char HTTP_BTN_RSTRT[] PROGMEM =
-  "<br/><form action='/rb' method='post'><button>Restart</button></form>";
+  "<br/><form action='/rb' method='post' onsubmit='return confirm(\"Confirm Restart\");'><button>Restart</button></form>";
 const char HTTP_BTN_MENU2[] PROGMEM =
   "<br/><form action='/w0' method='post'><button>Configure WiFi</button></form>"
 #ifdef USE_MQTT
@@ -111,7 +112,7 @@ const char HTTP_BTN_MENU2[] PROGMEM =
 #endif  // USE_MQTT
   "<br/><form action='/lg' method='post'><button>Configure Logging</button></form>"
   "<br/><form action='/co' method='post'><button>Configure Other</button></form>"
-  "<br/><form action='/rt' method='post'><button>Reset Configuration</button></form>";
+  "<br/><form action='/rt' method='post' onsubmit='return confirm(\"Confirm Reset Configuration\");'><button>Reset Configuration</button></form>";
 const char HTTP_BTN_MAIN[] PROGMEM =
   "<br/><br/><form action='/' method='post'><button>Main menu</button></form>";
 const char HTTP_BTN_CONF[] PROGMEM =
@@ -166,8 +167,8 @@ const char HTTP_FORM_LOG3[] PROGMEM =
   "<br/><b>Telemetric period</b> (" STR(TELE_PERIOD) ")<br/><input id='lt' name='lt' length=4 placeholder='" STR(TELE_PERIOD) "' value='{l4}'><br/>";
 const char HTTP_FORM_OTHER[] PROGMEM =
   "<fieldset><legend><b>&nbsp;Other parameters&nbsp;</b></legend><form method='post' action='sv'>"
-  "<input id='w' name='w' value='5' hidden><input id='r' name='r' value='0' hidden>"
-  "<br/><b>Friendly Name</b> (" FRIENDLY_NAME ")<br/><input id='an' name='an' length=32 placeholder='" FRIENDLY_NAME" ' value='{a1}'><br/>";
+  "<input id='w' name='w' value='5' hidden><input id='r' name='r' value='0' hidden>";
+//  "<br/><b>Friendly Name 1</b> (" FRIENDLY_NAME1 ")<br/><input id='an' name='an' length=32 placeholder='" FRIENDLY_NAME1 " ' value='{a1}'><br/>";
 const char HTTP_FORM_END[] PROGMEM =
   "<br/><button type='submit'>Save</button></form></fieldset>";
 const char HTTP_FORM_UPG[] PROGMEM =
@@ -251,6 +252,48 @@ const char WEMO_SETUP_XML[] PROGMEM =
   "</root>\r\n"
   "\r\n";
 #endif  // USE_WEMO_EMULATION
+#ifdef USE_HUE_EMULATION
+const char HUE_DESCRIPTION_XML[] PROGMEM =
+  "<?xml version=\"1.0\"?>"
+  "<root xmlns=\"urn:schemas-upnp-org:device-1-0\">"
+  "<specVersion>"
+      "<major>1</major>"
+      "<minor>0</minor>"
+  "</specVersion>"
+  "<URLBase>http://{x1}/</URLBase>"
+  "<device>"
+      "<deviceType>urn:schemas-upnp-org:device:Basic:1</deviceType>"
+      "<friendlyName>Amazon-Echo-HA-Bridge ({x1})</friendlyName>"
+      "<manufacturer>Royal Philips Electronics</manufacturer>"
+      "<modelName>Philips hue bridge 2012</modelName>"
+      "<modelNumber>929000226503</modelNumber>"
+      "<UDN>uuid:{x2}</UDN>"
+  "</device>"
+  "</root>\r\n"
+  "\r\n";
+
+const char HUE_LIGHT_STATUS_JSON[] PROGMEM =
+  "{\"state\":"
+      "{\"on\":{state},"
+      "\"bri\":{b},"
+      "\"hue\":{h},"
+      "\"sat\":{s},"
+      "\"effect\":\"none\","
+      "\"ct\":0,"
+      "\"alert\":\"none\","
+      "\"reachable\":true"
+  "},"
+  "\"type\":\"Dimmable light\","
+  "\"name\":\"{j1}\","
+  "\"modelid\":\"LWB004\","
+  "\"manufacturername\":\"Philips\","
+  "\"uniqueid\":\"{j2}\","
+  "\"swversion\":\"66012040\""
+  "}";
+
+const char HUE_LIGHT_RESPONSE_JSON[] PROGMEM =
+  "{\"success\":{\"{api}/{id}/{cmd}\":{res}}}";
+#endif  // USE_HUE_EMULATION
 
 #define DNS_PORT 53
 enum http_t {HTTP_OFF, HTTP_USER, HTTP_ADMIN, HTTP_MANAGER};
@@ -296,6 +339,9 @@ void startWebserver(int type, IPAddress ipweb)
       webServer->on("/eventservice.xml", handleUPnPservice);
       webServer->on("/setup.xml", handleUPnPsetup);
 #endif  // USE_WEMO_EMULATION
+#ifdef USE_HUE_EMULATION
+      webServer->on("/description.xml", handleUPnPsetup);
+#endif  // USE_HUE_EMULATION
       webServer->onNotFound(handleNotFound);
     }
     webServer->begin(); // Web server start
@@ -358,7 +404,7 @@ void pollDnsWeb()
 
 void showPage(String &page)
 {
-  page.replace("{h}", String(sysCfg.friendlyname));
+  page.replace("{h}", String(sysCfg.friendlyname[0]));
   page.replace("{ha}", Hostname);
   if (_httpflag == HTTP_MANAGER) {
     if (WIFI_configCounter()) {
@@ -389,7 +435,7 @@ void handleRoot()
   } else {
 
     String page = FPSTR(HTTP_HEAD);
-//    page.replace("<meta", "<meta http-equiv=\"refresh\" content=\"4; URL=/\"><meta");                    // Fails Edge (asks for reload)
+//    page.replace("<meta", "<meta http-equiv=\"refresh\" content=\"4; URL=/\"><meta");                   // Fails Edge (asks for reload)
 //    page.replace("</script>", "setTimeout(function(){window.location.reload(1);},4000);</script>");     // Repeats POST on All
 //    page.replace("</script>", "setTimeout(function(){window.location.replace(\"/\");},4000);</script>");  // OK on All
     page.replace("</script>","setInterval(function(){var x=new XMLHttpRequest();x.onreadystatechange=function(){if(x.readyState==4&&x.status==200){document.body.innerHTML=x.responseText}};x.open('GET','/',true);x.send();},4000);</script>");
@@ -506,7 +552,9 @@ void handleWifi(boolean scan)
   page.replace("{v}", "Configure Wifi");
 
   if (scan) {
-    if (udpConnected) WiFiUDP::stopAll();  // Needed when WeMo is enabled
+#if defined(USE_WEMO_EMULATION) || defined(USE_HUE_EMULATION)
+    UDP_Disconnect();
+#endif  // USE_WEMO_EMULATION || USE_HUE_EMULATION
     int n = WiFi.scanNetworks();
     addLog_P(LOG_LEVEL_DEBUG, PSTR("Wifi: Scan done"));
 
@@ -572,7 +620,6 @@ void handleWifi(boolean scan)
       }
       page += "<br/>";
     }
-    udpConnected = false;
   } else {
     page += FPSTR(HTTP_LNK_SCAN);
   }
@@ -716,7 +763,28 @@ void handleOther()
   String page = FPSTR(HTTP_HEAD);
   page.replace("{v}", "Configure Other");
   page += FPSTR(HTTP_FORM_OTHER);
-  page.replace("{a1}", String(sysCfg.friendlyname));
+  for (byte i = 0; i < Maxdevice; i++) {
+    page += F("<br/><b>Friendly Name ");
+    page += i +1;
+    page += F("</b> ({fn})<br/><input id='{id}' name='{id}' length=32 placeholder='{fn}' value='{f1}'><br/>");
+    if (i == 0) {
+      page.replace("{fn}", FRIENDLY_NAME1);
+      page.replace("{id}", "a1");
+    }
+    if (i == 1) {
+      page.replace("{fn}", FRIENDLY_NAME2);
+      page.replace("{id}", "a2");
+    }
+    else if (i == 2) {
+      page.replace("{fn}", FRIENDLY_NAME3);
+      page.replace("{id}", "a3");
+    }
+    else if (i == 3) {
+      page.replace("{fn}", FRIENDLY_NAME4);
+      page.replace("{id}", "a4");
+    }
+    page.replace("{f1}", String(sysCfg.friendlyname[i]));
+  }
   page += FPSTR(HTTP_FORM_END);
   page += FPSTR(HTTP_BTN_CONF);
   showPage(page);
@@ -789,9 +857,12 @@ void handleSave()
 #endif  // USE_DOMOTICZ
 #endif  // USE_MQTT
   case 5:
-    strlcpy(sysCfg.friendlyname, (!strlen(webServer->arg("an").c_str())) ? FRIENDLY_NAME : webServer->arg("an").c_str(), sizeof(sysCfg.friendlyname));
-    snprintf_P(log, sizeof(log), PSTR("HTTP: Other Friendly Name %s"),
-      sysCfg.friendlyname);
+    strlcpy(sysCfg.friendlyname[0], (!strlen(webServer->arg("a1").c_str())) ? FRIENDLY_NAME1 : webServer->arg("a1").c_str(), sizeof(sysCfg.friendlyname[0]));
+    strlcpy(sysCfg.friendlyname[1], (!strlen(webServer->arg("a2").c_str())) ? FRIENDLY_NAME2 : webServer->arg("a2").c_str(), sizeof(sysCfg.friendlyname[1]));
+    strlcpy(sysCfg.friendlyname[2], (!strlen(webServer->arg("a3").c_str())) ? FRIENDLY_NAME3 : webServer->arg("a3").c_str(), sizeof(sysCfg.friendlyname[2]));
+    strlcpy(sysCfg.friendlyname[3], (!strlen(webServer->arg("a4").c_str())) ? FRIENDLY_NAME4 : webServer->arg("a4").c_str(), sizeof(sysCfg.friendlyname[3]));
+    snprintf_P(log, sizeof(log), PSTR("HTTP: Other Friendly Names %s, %s, %s and %s"),
+      sysCfg.friendlyname[0], sysCfg.friendlyname[1], sysCfg.friendlyname[2], sysCfg.friendlyname[3]);
     addLog(LOG_LEVEL_INFO, log);
     break;
   }
@@ -954,7 +1025,9 @@ void handleUploadLoop()
       _uploaderror = 1;
       return;
     }
-    WiFiUDP::stopAll();  // Needed when WeMo is enabled
+#if defined(USE_WEMO_EMULATION) || defined(USE_HUE_EMULATION)
+    UDP_Disconnect();
+#endif  // USE_WEMO_EMULATION || USE_HUE_EMULATION
 #ifdef USE_MQTT
     mqttClient.disconnect();
 #endif  // USE_MQTT
@@ -983,6 +1056,13 @@ void handleUploadLoop()
         _uploaderror = 4;
         return;
       }
+      if ((MODULE == SONOFF_2) || (ESP.getFlashChipMode() == 3)) {
+        upload.buf[2] = 3; // DOUT - ESP8285
+      } else {
+        upload.buf[2] = 2; // DIO - ESP8266
+      }
+//      snprintf_P(log, sizeof(log), PSTR("Upload: Flash Chip Mode %02X"), upload.buf[2]);
+//      addLog(LOG_LEVEL_DEBUG, log);
     }
     if (!_uploaderror && (Update.write(upload.buf, upload.currentSize) != upload.currentSize)) {
       if (_serialoutput) Update.printError(Serial);
@@ -1123,7 +1203,6 @@ void handleInfo()
 //  page += F("<fieldset><legend><b>&nbsp;Information&nbsp;</b></legend>");
   page += F("<style>td{padding:0px 5px;}</style>");
   page += F("<table style'width:100%;'>");
-  page += F("<tr><td><b>Friendly name</b></td><td>"); page += String(sysCfg.friendlyname); page += F("</td></tr>");
   page += F("<tr><td><b>Program version</b></td><td>"); page += Version; page += F("</td></tr>");
   page += F("<tr><td><b>Core/SDK version</b></td><td>"); page += ESP.getCoreVersion(); page += F("/"); page += String(ESP.getSdkVersion()); page += F("</td></tr>");
 //  page += F("<tr><td><b>Boot version</b></td><td>"); page += String(ESP.getBootVersion()); page += F("</td></tr>");
@@ -1131,6 +1210,11 @@ void handleInfo()
   page += F("<tr><td><b>Flash write count</b></td><td>"); page += String(sysCfg.saveFlag); page += F("</td></tr>");
   page += F("<tr><td><b>Boot count</b></td><td>"); page += String(sysCfg.bootcount); page += F("</td></tr>");
   page += F("<tr><td><b>Reset reason</b></td><td>"); page += ESP.getResetReason(); page += F("</td></tr>");
+  for (byte i = 0; i < Maxdevice; i++) {
+    page += F("<tr><td><b>Friendly name ");
+    page += i +1;
+    page += F("</b></td><td>"); page += String(sysCfg.friendlyname[i]); page += F("</td></tr>");
+  }
   page += F("<tr><td>&nbsp;</td></tr>");
 //  page += F("<tr><td><b>SSId (RSSI)</b></td><td>"); page += (sysCfg.sta_active)? sysCfg.sta_ssid2 : sysCfg.sta_ssid1; page += F(" ("); page += WIFI_getRSSIasQuality(WiFi.RSSI()); page += F("%)</td></tr>");
   page += F("<tr><td><b>AP"); page += String(sysCfg.sta_active +1); page += F(" SSId (RSSI)</b></td><td>"); page += sysCfg.sta_ssid[sysCfg.sta_active]; page += F(" ("); page += WIFI_getRSSIasQuality(WiFi.RSSI()); page += F("%)</td></tr>");
@@ -1190,6 +1274,8 @@ void handleRestart()
   restartflag = 2;
 }
 
+/********************************************************************************************/
+
 #ifdef USE_WEMO_EMULATION
 void handleUPnPevent()
 {
@@ -1214,19 +1300,189 @@ void handleUPnPsetup()
   addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Handle WeMo setup"));
 
   String setup_xml = FPSTR(WEMO_SETUP_XML);
-//  setup_xml.replace("{x1}", String(MQTTClient));
-  setup_xml.replace("{x1}", String(sysCfg.friendlyname));
+  setup_xml.replace("{x1}", String(sysCfg.friendlyname[0]));
   setup_xml.replace("{x2}", wemo_UUID());
   setup_xml.replace("{x3}", wemo_serial());
-  webServer->send(200, "text/xml", setup_xml);
+  webServer->send(200, "text/plain", setup_xml);
 }
 #endif  // USE_WEMO_EMULATION
+
+/********************************************************************************************/
+
+#ifdef USE_HUE_EMULATION
+String hue_deviceId(uint8_t id)
+{
+  char deviceid[16];
+  
+  snprintf_P(deviceid, sizeof(deviceid), PSTR("5CCF7F%03X-%0d"), ESP.getChipId(), id);
+  return String(deviceid);
+}
+
+void handleUPnPsetup()
+{
+  addLog_P(LOG_LEVEL_DEBUG, PSTR("HTTP: Handle Hue Bridge setup"));
+
+  String description_xml = FPSTR(HUE_DESCRIPTION_XML);
+  description_xml.replace("{x1}", WiFi.localIP().toString());
+  description_xml.replace("{x2}", hue_UUID());
+  webServer->send(200, "text/xml", description_xml);
+}
+
+void hue_todo(String *path)
+{
+  char log[LOGSZ];
+  
+  snprintf_P(log, sizeof(log), PSTR("HTTP: HUE API not implemented (%s)"),path->c_str());
+  addLog(LOG_LEVEL_DEBUG_MORE, log);
+}
+
+void hue_lights(String *path)
+{
+  String response;
+  uint8_t device = 1;
+  int16_t pos = 0;
+  uint8_t bri = 0;
+  char id[4];
+
+  path->remove(0,path->indexOf("/lights"));                 // Remove until /lights
+  if (path->endsWith("/lights"))                           // Got /lights
+  {
+    response = "{\"";
+    for (uint8_t i = 1; i <= Maxdevice; i++)
+    {
+      response += i;
+      response += "\":";
+      response += FPSTR(HUE_LIGHT_STATUS_JSON);
+      if (i < Maxdevice) response += ",\"";
+      response.replace("{state}", (power & (0x01 << (i-1))) ? "true" : "false");
+      response.replace("{j1}", sysCfg.friendlyname[i-1]);
+      response.replace("{j2}", hue_deviceId(i));  
+#ifdef USE_WS2812
+      ws2812_replaceHSB(&response);
+#else
+      response.replace("{h}", "0");
+      response.replace("{s}", "0");
+      response.replace("{b}", "0");
+#endif // USE_WS2812
+    }
+    response += "}";
+    webServer->send(200, "application/json", response);
+  }
+  else if (path->endsWith("/state"))                         // Got ID/state
+  {
+    path->remove(0,8);                                       // Remove /lights/
+    path->remove(path->indexOf("/state"));                    // Remove /state
+    device = atoi(path->c_str());
+    if ((device < 1) || (device > Maxdevice)) device = 1;
+    response = "[";
+    response += FPSTR(HUE_LIGHT_RESPONSE_JSON);
+    response.replace("{api}", "/lights");
+    response.replace("{id}", String(device));
+    response.replace("{cmd}", "state/on");
+    if (webServer->args() == 1) 
+    {
+      String json = webServer->arg(0);
+//      Serial.print("HUE API: POST "); Serial.println(json.c_str());
+      if (json.indexOf("\"on\":") >= 0)      // Got "on" command
+      {
+        if (json.indexOf("false") >= 0)      // false -> turn device off
+        {
+          do_cmnd_power(device, 0);
+          response.replace("{res}", "false");
+        }
+        else if(json.indexOf("true") >= 0)   // true -> Turn device on
+        {
+          do_cmnd_power(device, 1);
+          response.replace("{res}", "true");
+        }
+        else
+        {
+          response.replace("{res}", (power & (0x01 << (device-1))) ? "true" : "false");
+        }
+      }
+#ifdef USE_WS2812
+      if ((pos=json.indexOf("\"bri\":")) >= 0)
+      {
+        bri=atoi(json.substring(pos+6).c_str());
+        ws2812_changeBrightness(bri);
+        response += ",";
+        response += FPSTR(HUE_LIGHT_RESPONSE_JSON);
+        response.replace("{api}", "/lights");
+        response.replace("{id}", String(device));
+        response.replace("{cmd}", "state/bri");
+        response.replace("{res}", String(bri));
+      }
+#endif // USE_WS2812
+      response += "]";
+      webServer->send(200, "application/json", response);
+    }   
+    else webServer->send(406, "application/json", "{}");
+  }
+  else if(path->indexOf("/lights/") >= 0)              // Got /lights/ID
+  {
+    path->remove(0,8);                                 // Remove /lights/
+    device = atoi(path->c_str());
+    if ((device < 1) || (device > Maxdevice)) device = 1;
+    response = FPSTR(HUE_LIGHT_STATUS_JSON);
+    response.replace("{state}", (power & (0x01 << (device -1))) ? "true" : "false");
+    response.replace("{j1}", sysCfg.friendlyname[device -1]);
+    response.replace("{j2}", hue_deviceId(device));
+#ifdef USE_WS2812
+    ws2812_replaceHSB(&response);
+#else
+    response.replace("{h}", "0");
+    response.replace("{s}", "0");
+    response.replace("{b}", "0");
+#endif // USE_WS2812
+    webServer->send(200, "application/json", response);
+  }
+  else webServer->send(406, "application/json", "{}");
+}
+
+void handle_hue_api(String *path)
+{
+  /* HUE API uses /api/<userid>/<command> syntax. The userid is created by the echo device and
+   * on original HUE the pressed button allows for creation of this user. We simply ignore the
+   * user part and allow every caller as with Web or WeMo. 
+   *
+   * (c) Heiko Krupp, 2017
+   */
+   
+  char log[LOGSZ];
+
+  path->remove(0, 4);                                // remove /api      
+  if (path->endsWith("/invalid/")) {}                // Just ignore
+  else if (path->endsWith("/config")) hue_todo(path);
+  else if(path->indexOf("/lights") >= 0) hue_lights(path);
+  else if(path->endsWith("/groups")) hue_todo(path);
+  else if(path->endsWith("/schedules")) hue_todo(path); 
+  else if(path->endsWith("/sensors")) hue_todo(path);
+  else if(path->endsWith("/scenes")) hue_todo(path);
+  else if(path->endsWith("/rules")) hue_todo(path);
+  else 
+  {
+    snprintf_P(log, sizeof(log), PSTR("HTTP: Handle Hue API (%s)"),path->c_str());
+    addLog(LOG_LEVEL_DEBUG_MORE, log);
+    webServer->send(406, "application/json", "{}");
+  }
+}
+#endif  // USE_HUE_EMULATION
+
+/********************************************************************************************/
 
 void handleNotFound()
 {
   if (captivePortal()) { // If captive portal redirect instead of displaying the error page.
     return;
   }
+
+#ifdef USE_HUE_EMULATION  
+  String path = webServer->uri();
+  if (path.startsWith("/api"))
+    handle_hue_api(&path);
+  else {
+#endif // USE_HUE_EMULATION
+  
   String message = "File Not Found\n\n";
   message += "URI: ";
   message += webServer->uri();
@@ -1243,6 +1499,10 @@ void handleNotFound()
   webServer->sendHeader("Pragma", "no-cache");
   webServer->sendHeader("Expires", "-1");
   webServer->send(404, "text/plain", message);
+#ifdef USE_HUE_EMULATION
+  addLog_P(LOG_LEVEL_DEBUG_MORE, message.c_str());
+  }
+#endif // USE_HUE_EMULATION
 }
 
 /* Redirect to captive portal if we got a request for another domain. Return true in that case so the page handler do not try to handle the request again. */
